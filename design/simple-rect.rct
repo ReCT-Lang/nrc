@@ -12,7 +12,7 @@ extern void* malloc(long size);
 
 class MyType {
 	set somePublicVariable -> int;
-	var somePrivateVariable = "my_string";
+	var somePrivateVariable <- "my_string";
 	
 	set Constructor() {
 		// Do constructor magic
@@ -35,7 +35,8 @@ class MyType {
 // Luckily strings are scope-specific char pointers, and thus are just an int/long.
 // The support of strings in structs can be debated tho.
 struct MyStruct {
-	var someLocalString -> string = "Hello, World!";
+	// This looks funny but hey
+	var someLocalString -> string <- "Hello, World!";
 
 	// This is not allowed, since MyType is not a value type.
 	// Look up "unmanaged" in C#, this is basically that.
