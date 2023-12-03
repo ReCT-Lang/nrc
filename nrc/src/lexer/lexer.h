@@ -3,7 +3,6 @@
 #include "token.h"
 
 typedef struct {
-
     token_t* tokens;
     int token_count;
     int tokens_allocated;

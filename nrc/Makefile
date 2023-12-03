@@ -71,8 +71,8 @@ RM:=rm -rf
 CC:=gcc
 LD:=gcc
 
-CCFLAGS:=
-LDFLAGS:=
+CCFLAGS:=-g
+LDFLAGS:=-g
 LIBRARY:=
 
 $(BIN):
