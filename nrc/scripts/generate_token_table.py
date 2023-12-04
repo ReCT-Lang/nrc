@@ -2,7 +2,7 @@
 
 import re
 
-query = re.compile('(TOKEN_.*),')
+query = re.compile('(TOKEN_[A-Z_]*)')
 
 in_file = open("../src/lexer/token.h", "r")
 data = in_file.read()
