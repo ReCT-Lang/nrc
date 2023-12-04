@@ -48,7 +48,6 @@
 #	$(BIN)/%.h - Copies header files to build directory
 #	$(BIN)/%.o - Build an object file
 
-BIN:=build
 EXE:=nrc
 
 MODS:=/cli /lexer /util
@@ -57,12 +56,7 @@ SRC:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.c))
 HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h))
 RCT:=$(wildcard src/r_test/*.rct)
 
-B_SRC:=$(foreach s,$(SRC),$(BIN)/$(s))
-B_HDR:=$(foreach h,$(HDR),$(BIN)/$(h))
-
-B_RCT:=$(foreach r,$(RCT),$(BIN)/$(r))
-
-OBJ:=$(patsubst %.c,%.o,$(B_SRC))
+OBJ:=$(patsubst %.c,%.o,$(SRC))
 
 MKDIR:=mkdir -p
 CP:=cp
@@ -79,37 +73,20 @@ $(BIN):
 	$(info [MK] CREATING BUILD DIR)
 	@$(MKDIR) $(BIN)
 
-$(BIN)/%.rct: %.rct $(BIN)
-	$(info [MK] COPYING RECT TEST src/$< => $@)
-	@$(MKDIR) $(shell dirname $@)
-	@$(CP) $< $@
-
-$(BIN)/%.c: %.c $(BIN)
-	$(info [MK] COPYING SOURCE $< => $@)
-	@$(MKDIR) $(shell dirname $@)
-	@$(CP) $< $@
-
-$(BIN)/%.h: %.h $(BIN)
-	$(info [MK] COPYING HEADER $< => $@)
-	@$(MKDIR) $(shell dirname $@)
-	@$(CP) $< $@
-
-$(BIN)/%.o: $(BIN)/%.c buildfiles
+%.o: %.c
 	$(info [CC] BUILDING $< => $@)
 	@$(CC) $(CCFLAGS) -c $< -o $@
-
-buildfiles: $(B_SRC) $(B_HDR)
 
 obj: $(OBJ)
 
 binary: obj
-	$(info [LD] LINKING $(OBJ) => $(BIN)/$(EXE))
-	@$(LD) $(LDFLAGS) $(OBJ) -o $(BIN)/$(EXE) $(LIBRARY)
+	$(info [LD] LINKING $(OBJ) => $(EXE))
+	@$(LD) $(LDFLAGS) $(OBJ) -o $(EXE) $(LIBRARY)
 
 all: binary $(B_RCT)
 
 run: all
-	./$(BIN)/$(EXE)
+	./$(EXE)
 
 clean:
 	$(RM) $(BIN)
