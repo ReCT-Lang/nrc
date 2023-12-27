@@ -59,7 +59,6 @@ const char* TOKEN_NAMES[] = {
         "TOKEN_END_STMT"
 };
 
-
 int main() {
     lexer_context* lexer = lexer_create();
 
