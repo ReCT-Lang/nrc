@@ -1,0 +1,3 @@
+[submodule "nrc/memstack"]
+	path = nrc/memstack
+	url = https://github.com/khhs167/memstack.git

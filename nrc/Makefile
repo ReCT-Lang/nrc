@@ -50,10 +50,10 @@
 
 EXE:=nrc
 
-MODS:=/cli /lexer /util
+MODS:=/cli /lexer /util /parser
 
-SRC:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.c))
-HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h))
+SRC:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.c)) memstack/src/memstack.c
+HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h)) memstack/include/memstack.c
 RCT:=$(wildcard src/r_test/*.rct)
 
 OBJ:=$(patsubst %.c,%.o,$(SRC))
@@ -65,7 +65,7 @@ RM:=rm -rf
 CC:=gcc
 LD:=gcc
 
-CCFLAGS:=-g
+CCFLAGS:=-g -Imemstack/include
 LDFLAGS:=-g
 LIBRARY:=
 

@@ -1,4 +1,5 @@
 #include "../lexer/lexer.h"
+#include "../parser/parser.h"
 
 
 const char* TOKEN_NAMES[] = {
@@ -70,5 +71,12 @@ int main() {
         printf("| %s: %s\n", TOKEN_NAMES[lexer->tokens[i].type], lexer->tokens[i].data);
     }
 
+    parser_context* parser = parser_create();
+
+    parser_parse(parser, lexer);
+
     lexer_destroy(lexer);
+
+
+    parser_destroy(parser);
 }

@@ -4,6 +4,7 @@
 #include <string.h>
 
 // I am terribly sorry...
+// But nevertheless, fucking lexer let's goooo!!!!
 
 // Push a token to the lexer context array
 static void push_token(lexer_context* lexer, token_t token) {
