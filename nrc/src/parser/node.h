@@ -17,17 +17,32 @@
 
 typedef enum {
     NODE_NULL,
-    NODE_ROOT
+    NODE_ROOT,
+    NODE_PACKAGE_DEF
 } node_type;
 
 typedef struct {
     node_type type;
-} node_t;
-typedef node_t* node;
+} node;
 
 typedef struct {
     node_type type;
-    node* children;
-    int child_count;
-} node_root_t;
-typedef node_root_t* node_root;
+} node_invalid;
+
+typedef struct {
+    int length;
+    int allocated;
+    node** data;
+} node_list;
+
+typedef struct {
+    node_type type;
+    node_list* children;
+} node_root;
+
+typedef struct {
+    node_type type;
+    char* package_name;
+} package_def_node;
+
+void print_node(node* node, int indent);

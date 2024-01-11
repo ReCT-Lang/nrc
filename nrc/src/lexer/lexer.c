@@ -27,6 +27,9 @@ static void push_empty_token(lexer_context* lexer, token_type_e type) {
 // Initialize a lexer context
 lexer_context* lexer_create() {
     lexer_context* lexer = (lexer_context*)malloc(sizeof(lexer_context));
+    lexer->token_count = 0;
+    lexer->tokens_allocated = 0;
+    lexer->tokens = NULL;
     return lexer;
 }
 

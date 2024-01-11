@@ -67,7 +67,7 @@ typedef enum token_type_e {
 
 } token_type_e;
 
-
+extern const char* TOKEN_NAMES[];
 
 typedef struct token_t {
     token_type_e type;
