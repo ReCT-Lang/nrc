@@ -2,14 +2,42 @@
 #include <stdlib.h>
 #include "token.h"
 #include <string.h>
+#include "../errors/error.h"
 
-// I am terribly sorry...
-// But nevertheless, fucking lexer let's goooo!!!!
+static int peek(lexer_context* context, int amt) {
+    if(context->position + amt >= context->data_length)
+        return EOF;
+    return context->data[context->position + amt];
+}
+
+static int current(lexer_context* context) {
+    return peek(context, 0);
+}
+
+static void step(lexer_context* context, int amt) {
+    for (int i = 0; i < amt; ++i) {
+        if(current(context) == EOF)
+            break;
+        if(current(context) == '\n') {
+            context->loc.column = 0;
+            context->loc.line++;
+        } else {
+            context->loc.column++;
+        }
+        context->position++;
+    }
+}
+
+static int consume(lexer_context* context) {
+    int c = current(context);
+    step(context, 1);
+    return c;
+}
 
 // Push a token to the lexer context array
 static void push_token(lexer_context* lexer, token_t token) {
     if(lexer->tokens_allocated <= lexer->token_count + 1) {
-        lexer->tokens = reallocarray(lexer->tokens, lexer->tokens_allocated * 2 + 1, sizeof(lexer_context));
+        lexer->tokens = reallocarray(lexer->tokens, lexer->tokens_allocated * 2 + 1, sizeof(token));
         lexer->tokens_allocated = lexer->tokens_allocated * 2 + 1;
     }
     lexer->tokens[lexer->token_count] = token;
@@ -21,6 +49,7 @@ static void push_empty_token(lexer_context* lexer, token_type_e type) {
     token_t token;
     token.type = type;
     token.data = NULL;
+    token.loc = lexer->loc;
     push_token(lexer, token);
 }
 
@@ -30,6 +59,7 @@ lexer_context* lexer_create() {
     lexer->token_count = 0;
     lexer->tokens_allocated = 0;
     lexer->tokens = NULL;
+    lexer->loc = (location){0, 0};
     return lexer;
 }
 
@@ -42,50 +72,14 @@ void lexer_destroy(lexer_context* context) {
     free(context);
 }
 
-static int proc_long_simple(lexer_context* context, const char* str, FILE* file, int c) {
-    if(c != str[0])
-        return 0;
-
-    int len = (int)strlen(str);
-    char* r_buf = (char*)malloc(len + 1);
-    r_buf[0] = (char)c;
-
-    for (int i = 1; i < len; ++i) {
-        char got = (char)fgetc(file);
-        r_buf[i] = got;
+static int look_ahead_equals(lexer_context* context, const char* str) {
+    int length = strlen(str);
+    for (int i = 0; i < length; ++i) {
+        int at = peek(context, i);
+        if(at != str[i])
+            return 0;
     }
-
-    // We need to add back everything to the file in reverse order(?).
-    // Otherwise we'll have issues!
-    for (int i = len - 1; i >= 1; --i) {
-        if(ungetc(r_buf[i], file) != r_buf[i]) {
-            fprintf(stderr, "Could not push char back onto lookahead stream!\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-    r_buf[len] = 0;
-
-    int eq = strcmp(r_buf, str);
-
-    // If it's equal, we'll consume a number of tokens :)
-    if(eq == 0) {
-        for (int i = 1; i < len; ++i) {
-            fgetc(file);
-        }
-    }
-
-    free(r_buf); // Memory leek
-    return eq == 0 ? 1 : 0;
-}
-
-// Just peek to the next char
-static int look_ahead(FILE* file) {
-    int c = fgetc(file);
-    if(ungetc(c, file) != c) {
-        fprintf(stderr, "Could not push char back onto lookahead stream!\n");
-        exit(EXIT_FAILURE);
-    }
-    return c;
+    return 1;
 }
 
 static int is_char_numeric(int c) {
@@ -103,7 +97,7 @@ static int is_char_word(int c) {
 }
 
 // This monster is responsible for tokenizing strings.
-static void lex_string(lexer_context* context, FILE* file) {
+static void lex_string(lexer_context* context) {
     // Average sting would be max 32 chars I'd guess
     char* read_buffer = malloc(32);
     // Due to performance concerns, we'll be using squared list growth(or whatever it is called).
@@ -111,16 +105,18 @@ static void lex_string(lexer_context* context, FILE* file) {
     int length = 0;
     int buffer_size = 32;
 
+    step(context, 1);
+
     while (1) {
-        int c = fgetc(file);
+        int c = current(context);
         if(c == EOF) {
             free(read_buffer);
-            fprintf(stderr, "Unexpected EOF\n");
+            error_throw("RCT1001", (location){0, 0}, "Unexpected EOF");
             return;
         }
         if(c == '\n') {
             free(read_buffer);
-            fprintf(stderr, "Unexpected EOF\n");
+            error_throw("RCT1001", (location){0, 0}, "Unexpected newline");
             return;
         }
         if(c == '"') break;
@@ -143,6 +139,7 @@ static void lex_string(lexer_context* context, FILE* file) {
         // Then we can add our character
         read_buffer[length] = (char)c;
         length++;
+        step(context, 1);
     }
 
     // We might not need this resizing pass, since our buffer might already
@@ -171,7 +168,7 @@ static void lex_string(lexer_context* context, FILE* file) {
 #define KW_CHECK(_s, _id) if(strcmp(token.data, _s) == 0) token.type = _id;
 
 // We treat ourselves to duplicate code for word tokenization.
-static void lex_word(lexer_context* context, FILE* file, int first) {
+static void lex_word(lexer_context* context) {
     // Average word would be 32 chars I'd guess
     char* read_buffer = malloc(32);
     // Due to performance concerns, we'll be using squared list growth(or whatever it is called).
@@ -180,12 +177,9 @@ static void lex_word(lexer_context* context, FILE* file, int first) {
     int length = 0;
     int buffer_size = 32;
 
-    read_buffer[0] = (char)first;
-    length++;
-
     int c;
     while (1) {
-        c = fgetc(file);
+        c = current(context);
         if(!is_char_word(c)) break;
 
         // All right, time to add on this character.
@@ -206,14 +200,9 @@ static void lex_word(lexer_context* context, FILE* file, int first) {
         // Then we can add our character
         read_buffer[length] = (char)c;
         length++;
+        step(context, 1);
     }
 
-    // Since we get the character after the word and then cancel, we'll have to put it back
-    // into the file to be able to then lex it in the future.
-
-    // This does not apply to strings since they are terminated by the quotes, which we'll throw
-    // away anyway.
-    ungetc(c, file);
 
     // We might not need this resizing pass, since our buffer might already
     // be big enough, but just to be safe. I'll have to take a look at this :)
@@ -263,18 +252,15 @@ static void lex_word(lexer_context* context, FILE* file, int first) {
 // Imagine if we had a template for this and not just ctrl+c ctrl+v
 // See comments in lex_string and lex_word where missing!
 
-static void lex_numeric(lexer_context* context, FILE* file, int first) {
+static void lex_numeric(lexer_context* context) {
     // Average numeric would be 8 chars I'd guess, instead of 32.
     char* read_buffer = malloc(8);
     int length = 0;
     int buffer_size = 8;
 
-    read_buffer[0] = (char)first;
-    length++;
-
     int c;
     while (1) {
-        c = fgetc(file);
+        c = current(context);
 
         // TODO: Decimals fucking suck.
         if(!is_char_numeric(c)) break;
@@ -292,9 +278,9 @@ static void lex_numeric(lexer_context* context, FILE* file, int first) {
 
         read_buffer[length] = (char)c;
         length++;
+        step(context, 1);
     }
 
-    ungetc(c, file);
 
     if(buffer_size <= length + 1) {
         char* new = realloc(read_buffer, buffer_size * 2);
@@ -317,20 +303,18 @@ static void lex_numeric(lexer_context* context, FILE* file, int first) {
 }
 
 // Characters we don't care about, such as whitespace
-#define CASE_SKIP(_char) if(c == _char) continue;
+#define CASE_SKIP(_char) if(current(context)  == _char) { step(context, 1); continue; }
 // Single-character tokens
-#define CASE_SIMPLE(_char, _type) if(c == _char) { push_empty_token(context, _type); continue; }
+#define CASE_SIMPLE(_char, _type) if(current(context) == _char) { step(context, 1); push_empty_token(context, _type); continue; }
 // Multi-character tokens WITHOUT any attached data
-#define CASE_SIMPLE_MULT(_str, _type) { if(proc_long_simple(context, _str, file, c)) { push_empty_token(context, _type); continue; } }
+#define CASE_SIMPLE_MULT(_str, _type) { if(look_ahead_equals(context, _str)) { step(context, sizeof(_str) - 1); push_empty_token(context, _type); continue; } }
 
-void lexer_process(lexer_context* context, FILE* file) {
-
-    int c;
-    while((c = fgetc(file)) != EOF) {
+void lexer_process(lexer_context* context) {
+    while(current(context) != EOF) {
         // Time to iterate through a million different cases.
 
-        if(c == '/' && look_ahead(file) == '/') {
-            while (c != '\n' && c != EOF) c = fgetc(file);
+        if(current(context) == '/' && peek(context, 1) == '/') {
+            while (current(context) != '\n' && current(context) != EOF) step(context, 1);
             continue;
         }
 
@@ -375,11 +359,26 @@ void lexer_process(lexer_context* context, FILE* file) {
         CASE_SIMPLE('*', TOKEN_OP_STAR)
         CASE_SIMPLE('/', TOKEN_OP_SLASH)
 
-        if(c == '"') { lex_string(context,file); continue; }
-        if(is_char_word_starter(c)) { lex_word(context, file, c); continue; }
-        if(is_char_numeric(c)) { lex_numeric(context, file, c); continue; }
+        if(current(context) == '"') { lex_string(context); continue; }
+        if(is_char_word_starter(current(context))) { lex_word(context); continue; }
+        if(is_char_numeric(current(context))) { lex_numeric(context); continue; }
         // For now, we just get mad :)
-        fprintf(stderr, "Invalid token %2X(%c)\n", c, c);
+        fprintf(stderr, "Invalid token %2X(%c)\n", current(context), current(context));
     }
     push_empty_token(context, TOKEN_EOF);
+}
+
+void lexer_read(lexer_context* lexer, FILE* file) {
+    long pos = ftell(file);
+    fseek(file, 0L, SEEK_END);
+    long size = ftell(file);
+    fseek(file, pos, SEEK_SET);
+
+    lexer->data = realloc(lexer->data, lexer->data_length + size);
+    fread(lexer->data + lexer->data_length, sizeof(char), size, file);
+    lexer->data_length += size;
+}
+
+void lexer_push(lexer_context* context, char* data, int length) {
+
 }
