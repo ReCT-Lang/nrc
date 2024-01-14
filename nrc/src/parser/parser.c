@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "stdlib.h"
 #include "nodes.h"
+#include "../errors/error.h"
 
 
 #define CAST(_to, _val) ((_to)_val)
@@ -71,7 +72,7 @@ static node* parse_anything(parser_context* parser) {
 
     if(c.type == TOKEN_KW_PACKAGE) return (node*) parse_package(parser);
 
-    fprintf(stderr, "Unexpected token %s\n", TOKEN_NAMES[c.type]);
+    error_throw("RCT2001", (location){0, 0}, "Unexpected token %s", TOKEN_NAMES[c.type]);
     step(parser, 1);
     return NULL;
 }

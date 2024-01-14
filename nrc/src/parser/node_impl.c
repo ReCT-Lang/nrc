@@ -3,7 +3,7 @@
 #include <string.h>
 #include "nodes.h"
 
-static void list_push(parser_context* context, node_list* list, node* data) {
+void list_push(parser_context* context, node_list* list, node* data) {
     // If we can't fit more data into the list, we need to allocate more memory.
     if(list->allocated < list->length + 1) {
         if(list->data == NULL) {

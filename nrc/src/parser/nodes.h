@@ -25,7 +25,7 @@ typedef struct {
     node** data;
 } node_list;
 
-void list_push(parser_context* context, node_list* list, node* data)
+void list_push(parser_context* context, node_list* list, node* data);
 
 typedef struct node_root{
 	node_type type;

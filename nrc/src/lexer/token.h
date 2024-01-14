@@ -1,5 +1,7 @@
 #pragma once
 
+#include "location.h"
+
 typedef enum token_type_e {
     TOKEN_INVALID,
     TOKEN_EOF,
@@ -71,5 +73,6 @@ extern const char* TOKEN_NAMES[];
 
 typedef struct token_t {
     token_type_e type;
+    location loc;
     char* data;
 } token_t;
