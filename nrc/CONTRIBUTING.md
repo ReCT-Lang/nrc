@@ -25,6 +25,10 @@ We don't have too strict rules on code formatting. There are a couple of things 
 - Bad code or temporary solutions should use `// TODO: xxxx` to tell what needs to be redone.
 - Comments should always be single-line - No `/* My comment */`. It's always `// My comment`.
 - Keep to the horizontal 80-char limit. It's easier to work with.
+- We try to use `#pragma once` for our source files. Sometimes it won't work tho, so feel free to use `#ifndef`
+    in those cases. 
+- Try to stay standard conformant and cross-platform, i.e. no win32 API calls. The "official" compiler we use is however
+    GCC, so we can permit certain GCC-only functionality where needed(however we recommend you use preproc flags for them)
 
 If unsure of something, just look at the existing code and judge yourself.
 
