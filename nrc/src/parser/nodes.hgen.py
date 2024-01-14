@@ -12,7 +12,7 @@ output = '''// AUTO GENERATED!
 #include "parser.h"
 
 typedef char* string;
-struct parser_context;
+typedef struct parser_context parser_context;
 
 typedef enum {
 \tNODE_NULL,
@@ -36,6 +36,8 @@ typedef struct {
     node** data;
 } node_list;
 
+void list_push(parser_context* context, node_list* list, node* data)
+
 '''
 
 for t in definitions.keys():
@@ -52,13 +54,14 @@ for t in definitions.keys():
             dataType += "*"
         output += "\t" + dataType + " " + fieldName + ";\n"
     output += "} " + t + ";\n\n"
-    output += t + "* new_" + t + "(struct parser_context* parser);\n\n"
+    output += t + "* new_" + t + "(parser_context* parser);\n\n"
+    output += t + "* as_" + t + "(node* n);\n\n"
 
 output += "void print_node(node* node, int indent);\n\n"
 output += "#ifdef NODES_PRINT_IMPL\n\n"
 
 output += '''
-node_list* new_node_list(struct parser_context* context) {
+node_list* new_node_list(parser_context* context) {
     node_list* list = (node_list*)palloc(context, sizeof(node_list));
     list->length = 0;
     list->allocated = 0;
@@ -79,7 +82,7 @@ static void print_string(const char* name, string s, int indent) {
 
 for t in definitions.keys():
     # Generate node type functions such as print & new
-    output += t + "* new_" + t + "(struct parser_context* parser) {\n"
+    output += t + "* new_" + t + "(parser_context* parser) {\n"
     output += "\t" + t + "* data = (" + t + "*)palloc(parser, sizeof(" + t + "));\n"
     output += "\t" + "memset(data, 0, sizeof(" + t + "));\n"
     output += "\t" + "data->type = " + t.upper() + ";\n"
@@ -90,6 +93,10 @@ for t in definitions.keys():
 
     output += "\t" + "return data;\n"
     output += "};\n\n"
+
+    output += t + "* as_" + t + "(node* n) {\n"
+    output += "\treturn n->type == " + t.upper() + " ? (" + t + "*)n : NULL;\n}\n\n"
+
     output += "void print_" + t + "(" + t + "* node, int indent) {\n"
     output += '\tprintf("%*s ' + t.upper() + ':\\n", indent, "");\n'
 
