@@ -51,7 +51,7 @@
 
 EXE:=nrc
 
-MODS:=/cli /lexer /util /parser
+MODS:=/cli /lexer /util /parser /errors
 
 CPY:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.cgen.py))
 HPY:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.hgen.py))
@@ -84,7 +84,7 @@ $(BIN):
 	$(info [PY] GENERATING $< => $@)
 	@cd "$(dir $<)" && $(PY) $(notdir $<)
 
-%.o: %.c $(HDR)
+%.o: %.c
 	$(info [CC] BUILDING $< => $@)
 	@$(CC) $(CCFLAGS) -c $< -o $@
 
