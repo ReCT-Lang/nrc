@@ -168,6 +168,8 @@ static void lex_string(lexer_context* context, FILE* file) {
     push_token(context, token);
 }
 
+#define KW_CHECK(_s, _id) if(strcmp(token.data, _s) == 0) token.type = _id;
+
 // We treat ourselves to duplicate code for word tokenization.
 static void lex_word(lexer_context* context, FILE* file, int first) {
     // Average word would be 32 chars I'd guess
@@ -231,7 +233,29 @@ static void lex_word(lexer_context* context, FILE* file, int first) {
     // DON'T FREE THE READ BUFFER!!!
     token_t token;
     token.data = read_buffer;
-    token.type = TOKEN_ID;
+
+    // Time to do some string checking ig
+    KW_CHECK("var", TOKEN_KW_VAR)
+    else KW_CHECK("set", TOKEN_KW_SET)
+    else KW_CHECK("extern", TOKEN_KW_EXTERN)
+    else KW_CHECK("static", TOKEN_KW_STATIC)
+    else KW_CHECK("if", TOKEN_KW_IF)
+    else KW_CHECK("else", TOKEN_KW_ELSE)
+    else KW_CHECK("elif", TOKEN_KW_ELIF)
+    else KW_CHECK("for", TOKEN_KW_FOR)
+    else KW_CHECK("function", TOKEN_KW_FUNCTION)
+    else KW_CHECK("return", TOKEN_KW_RETURN)
+    else KW_CHECK("continue", TOKEN_KW_CONTINUE)
+    else KW_CHECK("break", TOKEN_KW_BREAK)
+    else KW_CHECK("make", TOKEN_KW_MAKE)
+    else KW_CHECK("class", TOKEN_KW_CLASS)
+    else KW_CHECK("struct", TOKEN_KW_STRUCT)
+    else KW_CHECK("enum", TOKEN_KW_ENUM)
+    else KW_CHECK("package", TOKEN_KW_PACKAGE)
+    else KW_CHECK("use", TOKEN_KW_USE)
+    else KW_CHECK("alias", TOKEN_KW_ALIAS)
+    else KW_CHECK("ref", TOKEN_KW_REF)
+    else token.type = TOKEN_ID;
 
     push_token(context, token);
 }

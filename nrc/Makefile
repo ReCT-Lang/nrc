@@ -19,6 +19,8 @@
 # 	BIN - The output/binary directory
 # 	EXE - The binary file
 # 	MODS - All the source directories(under src)
+#	CPY - All ".cgen.py" files, which are python scripts that generate C code
+#	HPY - All ".hgen.py" files, which are python scripts that generate C headers
 # 	SRC - All the files that should be compiled
 # 	HDR - All the header files in the project
 # 	B_SRC - The source files as found in the build directory
@@ -44,18 +46,18 @@
 #	clean - Deletes the build directory
 #
 #		Special targets:
-#	$(BIN)/%.c - Copies C files to build directory
-#	$(BIN)/%.h - Copies header files to build directory
-#	$(BIN)/%.o - Build an object file
+#	%.c: %.cgen.py - Generates a C file from a C generator
+#	%.h: %.hgen.py - Generates a H file from a header generator
 
 EXE:=nrc
 
 MODS:=/cli /lexer /util /parser
 
-SRC:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.c)) memstack/src/memstack.c
-HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h)) memstack/include/memstack.c
+CPY:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.cgen.py))
+HPY:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.hgen.py))
+SRC:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.c)) $(patsubst %.cgen.py,%.c,$(CPY)) memstack/src/memstack.c
+HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h)) $(patsubst %.hgen.py,%.h,$(HPY)) memstack/include/memstack.c
 RCT:=$(wildcard src/r_test/*.rct)
-
 OBJ:=$(patsubst %.c,%.o,$(SRC))
 
 MKDIR:=mkdir -p
@@ -64,6 +66,7 @@ RM:=rm -rf
 
 CC:=gcc
 LD:=gcc
+PY:=python
 
 CCFLAGS:=-g -Imemstack/include
 LDFLAGS:=-g
@@ -73,7 +76,15 @@ $(BIN):
 	$(info [MK] CREATING BUILD DIR)
 	@$(MKDIR) $(BIN)
 
-%.o: %.c
+%.c: %.cgen.py
+	$(info [PY] GENERATING $< => $@)
+	@cd "$(dir $<)" && $(PY) $(notdir $<)
+
+%.h: %.hgen.py
+	$(info [PY] GENERATING $< => $@)
+	@cd "$(dir $<)" && $(PY) $(notdir $<)
+
+%.o: %.c $(HDR)
 	$(info [CC] BUILDING $< => $@)
 	@$(CC) $(CCFLAGS) -c $< -o $@
 
@@ -89,4 +100,4 @@ run: all
 	./$(EXE)
 
 clean:
-	$(RM) $(BIN)
+	$(RM) $(BIN) $(OBJ)

@@ -1,20 +1,8 @@
 #include <string.h>
 #include "parser.h"
 #include "stdlib.h"
+#include "nodes.h"
 
-#define CONSTRUCT(_context, _type, _id) ({ \
-        _type* data = (_type*)palloc(_context, sizeof(_type)); \
-        memset(data, 0, sizeof(_type)); \
-        data->type = _id;                                   \
-        data;\
-    })
-#define NEW_LIST(_context) ({ \
-        node_list* list = (node_list*)palloc(_context, sizeof(node_list)); \
-        list->length = 0;     \
-        list->allocated = 0;  \
-        list->data = NULL;    \
-        list;\
-    })
 
 #define CAST(_to, _val) ((_to)_val)
 
@@ -40,6 +28,7 @@ static void step(parser_context* parser, int amt) {
 
 static token_t consume(parser_context* parser, token_type_e type) {
     token_t c = current(parser);
+    step(parser, 1);
     if(c.type != type) {
         // TODO: Proper exception throwing
         fprintf(stderr, "Expected token %s, got %s\n", TOKEN_NAMES[type], TOKEN_NAMES[c.type]);
@@ -82,13 +71,13 @@ static void list_push(parser_context* context, node_list* list, node* data) {
     list->length++;
 }
 
-static package_def_node* parse_package(parser_context* parser) {
+static node_package_def* parse_package(parser_context* parser) {
     consume(parser, TOKEN_KW_PACKAGE);
 
     token_t name = consume(parser, TOKEN_ID);
-    package_def_node* root_node = CONSTRUCT(parser, package_def_node, NODE_PACKAGE_DEF);
+    node_package_def* root_node = new_node_package_def(parser);
 
-    root_node->package_name = palloc(parser, (int)strlen(name.data));
+    root_node->package_name = palloc(parser, (int)strlen(name.data) + 1);
     strcpy(root_node->package_name, name.data);
 
     consume(parser, TOKEN_END_STMT);
@@ -107,8 +96,7 @@ static node* parse_anything(parser_context* parser) {
 }
 
 void parser_parse(parser_context* parser) {
-    node_root* root_node = CONSTRUCT(parser, node_root, NODE_ROOT);
-    root_node->children = NEW_LIST(parser);
+    node_root* root_node = new_node_root(parser);
     parser->node = (node*)root_node;
 
     while(current(parser).type != TOKEN_EOF) {

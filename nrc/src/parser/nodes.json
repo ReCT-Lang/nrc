@@ -1,0 +1,12 @@
+{
+  "node_root": {
+    "children": "node_list"
+  },
+  "node_package_def": {
+    "package_name": "string"
+  },
+  "node_function": {
+    "thing": "node",
+    "thing2": "node_root"
+  }
+}
