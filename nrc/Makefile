@@ -23,8 +23,7 @@
 #	HPY - All ".hgen.py" files, which are python scripts that generate C headers
 # 	SRC - All the files that should be compiled
 # 	HDR - All the header files in the project
-# 	B_SRC - The source files as found in the build directory
-# 	B_HDR - The header files as found in the build directory
+#	DEPS - Auto-generated C dependencies
 # 	OBJ - The object files
 # 	MKDIR - The command used to create a dir(without error)
 # 	RM - The command used to delete files/dirs(without errors)
@@ -60,6 +59,8 @@ HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h)) $(patsubst %.hgen.py,%.h,$
 RCT:=$(wildcard src/r_test/*.rct)
 OBJ:=$(patsubst %.c,%.o,$(SRC))
 
+DEPS=$(SRC:.c=.d)
+
 MKDIR:=mkdir -p
 CP:=cp
 RM:=rm -rf
@@ -71,6 +72,8 @@ PY:=python
 CCFLAGS:=-g -Imemstack/include
 LDFLAGS:=-g
 LIBRARY:=
+
+-include $(DEPS)
 
 $(BIN):
 	$(info [MK] CREATING BUILD DIR)
@@ -86,7 +89,7 @@ $(BIN):
 
 %.o: %.c
 	$(info [CC] BUILDING $< => $@)
-	@$(CC) $(CCFLAGS) -c $< -o $@
+	@$(CC) $(CCFLAGS) -MMD -MP -c $< -o $@
 
 obj: $(OBJ)
 
@@ -101,3 +104,5 @@ run: all
 
 clean:
 	$(RM) $(BIN) $(OBJ)
+
+.PHONY: clean, run, all, binary, obj
