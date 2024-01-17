@@ -2,3 +2,4 @@
 *.d
 nrc
 .idea
+!build.d

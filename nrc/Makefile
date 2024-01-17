@@ -59,7 +59,7 @@ HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h)) $(patsubst %.hgen.py,%.h,$
 RCT:=$(wildcard src/r_test/*.rct)
 OBJ:=$(patsubst %.c,%.o,$(SRC))
 
-DEPS=$(SRC:.c=.d)
+DEPS=$(SRC:.c=.d) build.d
 
 MKDIR:=mkdir -p
 CP:=cp

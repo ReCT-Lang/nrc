@@ -7,6 +7,7 @@ const char* TOKEN_NAMES[] = {
         "TOKEN_KW_SET",
         "TOKEN_KW_EXTERN",
         "TOKEN_KW_STATIC",
+        "TOKEN_KW_UNSAFE",
         "TOKEN_KW_IF",
         "TOKEN_KW_ELSE",
         "TOKEN_KW_ELIF",

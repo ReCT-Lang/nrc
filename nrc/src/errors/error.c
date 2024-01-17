@@ -55,6 +55,8 @@ void error_throw(error_code code, location loc, const char* fmt, ...) {
 
     error e = {.code = code, .loc = loc, .string = error_msg};
 
+    fprintf(stderr, "[ERR] [L: %u, C: %u] %s: %s\n", e.loc.line, e.loc.column, e.code, e.string);
+
     // We push everything to a linked list for ease.
     if(root_node == NULL) {
         root_node = malloc(sizeof(error_list_node));

@@ -14,6 +14,15 @@ output = '''// AUTO GENERATED!
 typedef char* string;
 typedef struct parser_context parser_context;
 
+typedef enum permissions {
+    PERMS_PUBLIC = 1,
+    PERMS_PRIVATE = 2,
+    PERMS_STATIC = 4,
+    PERMS_EXTERN = 8,
+    PERMS_UNSAFE = 16,
+    PERMS_NONE = 0
+} permissions;
+
 typedef enum {
 \tNODE_NULL,
 \t'''
@@ -36,9 +45,15 @@ typedef struct {
     node** data;
 } node_list;
 
-void list_push(parser_context* context, node_list* list, node* data)
+void list_push(parser_context* context, node_list* list, node* data);
 
 '''
+
+# Forwards declarations
+for t in definitions.keys():
+    output += "typedef struct " + t + " " + t + ";\n"
+
+output += "\n\n\n"
 
 for t in definitions.keys():
     data = definitions[t]
@@ -50,6 +65,8 @@ for t in definitions.keys():
             dataType += "*"
         if dataType == "node":
             dataType += "*"
+        if dataType == t:
+            dataType = "struct " + dataType + "*"
         if dataType in definitions:
             dataType += "*"
         output += "\t" + dataType + " " + fieldName + ";\n"
@@ -57,7 +74,7 @@ for t in definitions.keys():
     output += t + "* new_" + t + "(parser_context* parser);\n\n"
     output += t + "* as_" + t + "(node* n);\n\n"
 
-output += "void print_node(node* node, int indent);\n\n"
+output += "void print_node(node* node, const char* name, int indent);\n\n"
 output += "#ifdef NODES_PRINT_IMPL\n\n"
 
 output += '''
@@ -70,15 +87,23 @@ node_list* new_node_list(parser_context* context) {
 };
 
 static void print_node_list(const char* name, node_list* list, int indent) {
-    printf("%*s %s:\\n", indent, "", name);
+    printf("%*s%s:\\n", indent * 4, "", name);
     for (int i = 0; i < list->length; ++i) {
-        print_node(list->data[i], indent + 1);
+        print_node(list->data[i], NULL, indent + 1);
     }
 }
 
 static void print_string(const char* name, string s, int indent) {
-    printf("%*s %s: \\"%s\\"\\n", indent, "", name, s);
+    printf("%*s%s: \\"%s\\"\\n", indent * 4, "", name, s);
+}
+
+static void print_int(const char* name, int v, int indent) {
+    printf("%*s%s: \\"%i\\"\\n", indent * 4, "", name, v);
 }\n\n'''
+
+for t in definitions.keys():
+    output += "void print_" + t + "(" + t + "* node, const char* name, int indent);\n"
+output += "\n\n"
 
 for t in definitions.keys():
     # Generate node type functions such as print & new
@@ -97,27 +122,39 @@ for t in definitions.keys():
     output += t + "* as_" + t + "(node* n) {\n"
     output += "\treturn n->type == " + t.upper() + " ? (" + t + "*)n : NULL;\n}\n\n"
 
-    output += "void print_" + t + "(" + t + "* node, int indent) {\n"
-    output += '\tprintf("%*s ' + t.upper() + ':\\n", indent, "");\n'
+    output += "void print_" + t + "(" + t + "* n, const char* name, int indent) {\n"
+    output += "\tif(n == NULL)\n"
+    output += "\t\treturn print_node((node*)n, name, indent);\n"
+    output += "\tif(name == NULL)\n"
+    output += '\t\tprintf("%*s' + t.upper() + '\\n", indent * 4, "");\n'
+    output += '\telse\n'
+    output += '\t\tprintf("%*s%s: ' + t.upper() + '\\n", indent * 4, "", name);\n'
 
     fields = definitions[t]
 
     for name in fields.keys():
         if fields[name] == "node_list":
-            output += "\tprint_node_list(\"" + name + "\", node->" + name + ", indent + 1);\n"
+            output += "\tprint_node_list(\"" + name + "\", n->" + name + ", indent + 1);\n"
         elif fields[name] == "string":
-            output += "\tprint_string(\"" + name + "\", node->" + name + ", indent + 1);\n"
+            output += "\tprint_string(\"" + name + "\", n->" + name + ", indent + 1);\n"
+        elif fields[name] == "int":
+            output += "\tprint_int(\"" + name + "\", n->" + name + ", indent + 1);\n"
+        elif fields[name] == "permissions":  # Perms is just an int for now.
+            output += "\tprint_int(\"" + name + "\", n->" + name + ", indent + 1);\n"
         elif fields[name] == "node":
-            output += "\tprintf(\"" + name + ":\" );\n\tprint_node(node->" + name + ", indent + 1);\n"
+            output += "\tprint_node(n->" + name + ", \"\", indent + 1);\n"
         elif fields[name] in definitions:
-            output += "\tprintf(\"" + name + ":\" );\n\tprint_" + fields[name] + "(node->" + name + ", indent + 1);\n"
+            output += "\tprint_" + fields[name] + "(n->" + name + ", \"" + name + "\", indent + 1);\n"
 
     output += "}\n\n"
 
-output += '''void print_node(node* node, int indent)
+output += '''void print_node(node* node, const char* name, int indent)
 {
     if(node == NULL) {
-        printf("%*s NULL\\n", indent, "");
+        if(name != NULL)
+            printf("%*s%s: NULL\\n", indent * 4, "", name);
+        else
+            printf("%*sNULL\\n", indent * 4, "");
         return;
     }
     
@@ -128,7 +165,7 @@ output += '''void print_node(node* node, int indent)
 
 for t in definitions.keys():
     output += "\t\tcase " + t.upper() + ":\n"
-    output += "\t\t\tprint_" + t + "((" + t + "*)node, indent + 1);\n"
+    output += "\t\t\tprint_" + t + "((" + t + "*)node, name, indent);\n"
     output += "\t\t\tbreak;\n"
 
 output += '''   }

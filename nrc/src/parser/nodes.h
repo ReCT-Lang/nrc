@@ -7,11 +7,24 @@
 typedef char* string;
 typedef struct parser_context parser_context;
 
+typedef enum permissions {
+    PERMS_PUBLIC = 1,
+    PERMS_PRIVATE = 2,
+    PERMS_STATIC = 4,
+    PERMS_EXTERN = 8,
+    PERMS_UNSAFE = 16,
+    PERMS_NONE = 0
+} permissions;
+
 typedef enum {
 	NODE_NULL,
 	NODE_ROOT,
 	NODE_PACKAGE_DEF,
-	NODE_FUNCTION
+	NODE_CLASS_DEF,
+	NODE_STRUCT_DEF,
+	NODE_FUNCTION_DEF,
+	NODE_ENUM_DEF,
+	NODE_IDENTIFIER
 } node_type;
 
 
@@ -26,6 +39,16 @@ typedef struct {
 } node_list;
 
 void list_push(parser_context* context, node_list* list, node* data);
+
+typedef struct node_root node_root;
+typedef struct node_package_def node_package_def;
+typedef struct node_class_def node_class_def;
+typedef struct node_struct_def node_struct_def;
+typedef struct node_function_def node_function_def;
+typedef struct node_enum_def node_enum_def;
+typedef struct node_identifier node_identifier;
+
+
 
 typedef struct node_root{
 	node_type type;
@@ -45,17 +68,60 @@ node_package_def* new_node_package_def(parser_context* parser);
 
 node_package_def* as_node_package_def(node* n);
 
-typedef struct node_function{
+typedef struct node_class_def{
 	node_type type;
-	node* thing;
-	node_root* thing2;
-} node_function;
+	string name;
+	permissions flags;
+} node_class_def;
 
-node_function* new_node_function(parser_context* parser);
+node_class_def* new_node_class_def(parser_context* parser);
 
-node_function* as_node_function(node* n);
+node_class_def* as_node_class_def(node* n);
 
-void print_node(node* node, int indent);
+typedef struct node_struct_def{
+	node_type type;
+	string name;
+	permissions flags;
+} node_struct_def;
+
+node_struct_def* new_node_struct_def(parser_context* parser);
+
+node_struct_def* as_node_struct_def(node* n);
+
+typedef struct node_function_def{
+	node_type type;
+	string name;
+	permissions flags;
+	node_identifier* return_type;
+} node_function_def;
+
+node_function_def* new_node_function_def(parser_context* parser);
+
+node_function_def* as_node_function_def(node* n);
+
+typedef struct node_enum_def{
+	node_type type;
+	string name;
+	permissions flags;
+} node_enum_def;
+
+node_enum_def* new_node_enum_def(parser_context* parser);
+
+node_enum_def* as_node_enum_def(node* n);
+
+typedef struct node_identifier{
+	node_type type;
+	string name;
+	int package;
+	int pointer;
+	struct node_identifier* child;
+} node_identifier;
+
+node_identifier* new_node_identifier(parser_context* parser);
+
+node_identifier* as_node_identifier(node* n);
+
+void print_node(node* node, const char* name, int indent);
 
 #ifdef NODES_PRINT_IMPL
 
@@ -69,15 +135,28 @@ node_list* new_node_list(parser_context* context) {
 };
 
 static void print_node_list(const char* name, node_list* list, int indent) {
-    printf("%*s %s:\n", indent, "", name);
+    printf("%*s%s:\n", indent * 4, "", name);
     for (int i = 0; i < list->length; ++i) {
-        print_node(list->data[i], indent + 1);
+        print_node(list->data[i], NULL, indent + 1);
     }
 }
 
 static void print_string(const char* name, string s, int indent) {
-    printf("%*s %s: \"%s\"\n", indent, "", name, s);
+    printf("%*s%s: \"%s\"\n", indent * 4, "", name, s);
 }
+
+static void print_int(const char* name, int v, int indent) {
+    printf("%*s%s: \"%i\"\n", indent * 4, "", name, v);
+}
+
+void print_node_root(node_root* node, const char* name, int indent);
+void print_node_package_def(node_package_def* node, const char* name, int indent);
+void print_node_class_def(node_class_def* node, const char* name, int indent);
+void print_node_struct_def(node_struct_def* node, const char* name, int indent);
+void print_node_function_def(node_function_def* node, const char* name, int indent);
+void print_node_enum_def(node_enum_def* node, const char* name, int indent);
+void print_node_identifier(node_identifier* node, const char* name, int indent);
+
 
 node_root* new_node_root(parser_context* parser) {
 	node_root* data = (node_root*)palloc(parser, sizeof(node_root));
@@ -91,9 +170,14 @@ node_root* as_node_root(node* n) {
 	return n->type == NODE_ROOT ? (node_root*)n : NULL;
 }
 
-void print_node_root(node_root* node, int indent) {
-	printf("%*s NODE_ROOT:\n", indent, "");
-	print_node_list("children", node->children, indent + 1);
+void print_node_root(node_root* n, const char* name, int indent) {
+	if(n == NULL)
+		return print_node((node*)n, name, indent);
+	if(name == NULL)
+		printf("%*sNODE_ROOT\n", indent * 4, "");
+	else
+		printf("%*s%s: NODE_ROOT\n", indent * 4, "", name);
+	print_node_list("children", n->children, indent + 1);
 }
 
 node_package_def* new_node_package_def(parser_context* parser) {
@@ -107,34 +191,136 @@ node_package_def* as_node_package_def(node* n) {
 	return n->type == NODE_PACKAGE_DEF ? (node_package_def*)n : NULL;
 }
 
-void print_node_package_def(node_package_def* node, int indent) {
-	printf("%*s NODE_PACKAGE_DEF:\n", indent, "");
-	print_string("package_name", node->package_name, indent + 1);
+void print_node_package_def(node_package_def* n, const char* name, int indent) {
+	if(n == NULL)
+		return print_node((node*)n, name, indent);
+	if(name == NULL)
+		printf("%*sNODE_PACKAGE_DEF\n", indent * 4, "");
+	else
+		printf("%*s%s: NODE_PACKAGE_DEF\n", indent * 4, "", name);
+	print_string("package_name", n->package_name, indent + 1);
 }
 
-node_function* new_node_function(parser_context* parser) {
-	node_function* data = (node_function*)palloc(parser, sizeof(node_function));
-	memset(data, 0, sizeof(node_function));
-	data->type = NODE_FUNCTION;
+node_class_def* new_node_class_def(parser_context* parser) {
+	node_class_def* data = (node_class_def*)palloc(parser, sizeof(node_class_def));
+	memset(data, 0, sizeof(node_class_def));
+	data->type = NODE_CLASS_DEF;
 	return data;
 };
 
-node_function* as_node_function(node* n) {
-	return n->type == NODE_FUNCTION ? (node_function*)n : NULL;
+node_class_def* as_node_class_def(node* n) {
+	return n->type == NODE_CLASS_DEF ? (node_class_def*)n : NULL;
 }
 
-void print_node_function(node_function* node, int indent) {
-	printf("%*s NODE_FUNCTION:\n", indent, "");
-	printf("thing:" );
-	print_node(node->thing, indent + 1);
-	printf("thing2:" );
-	print_node_root(node->thing2, indent + 1);
+void print_node_class_def(node_class_def* n, const char* name, int indent) {
+	if(n == NULL)
+		return print_node((node*)n, name, indent);
+	if(name == NULL)
+		printf("%*sNODE_CLASS_DEF\n", indent * 4, "");
+	else
+		printf("%*s%s: NODE_CLASS_DEF\n", indent * 4, "", name);
+	print_string("name", n->name, indent + 1);
+	print_int("flags", n->flags, indent + 1);
 }
 
-void print_node(node* node, int indent)
+node_struct_def* new_node_struct_def(parser_context* parser) {
+	node_struct_def* data = (node_struct_def*)palloc(parser, sizeof(node_struct_def));
+	memset(data, 0, sizeof(node_struct_def));
+	data->type = NODE_STRUCT_DEF;
+	return data;
+};
+
+node_struct_def* as_node_struct_def(node* n) {
+	return n->type == NODE_STRUCT_DEF ? (node_struct_def*)n : NULL;
+}
+
+void print_node_struct_def(node_struct_def* n, const char* name, int indent) {
+	if(n == NULL)
+		return print_node((node*)n, name, indent);
+	if(name == NULL)
+		printf("%*sNODE_STRUCT_DEF\n", indent * 4, "");
+	else
+		printf("%*s%s: NODE_STRUCT_DEF\n", indent * 4, "", name);
+	print_string("name", n->name, indent + 1);
+	print_int("flags", n->flags, indent + 1);
+}
+
+node_function_def* new_node_function_def(parser_context* parser) {
+	node_function_def* data = (node_function_def*)palloc(parser, sizeof(node_function_def));
+	memset(data, 0, sizeof(node_function_def));
+	data->type = NODE_FUNCTION_DEF;
+	return data;
+};
+
+node_function_def* as_node_function_def(node* n) {
+	return n->type == NODE_FUNCTION_DEF ? (node_function_def*)n : NULL;
+}
+
+void print_node_function_def(node_function_def* n, const char* name, int indent) {
+	if(n == NULL)
+		return print_node((node*)n, name, indent);
+	if(name == NULL)
+		printf("%*sNODE_FUNCTION_DEF\n", indent * 4, "");
+	else
+		printf("%*s%s: NODE_FUNCTION_DEF\n", indent * 4, "", name);
+	print_string("name", n->name, indent + 1);
+	print_int("flags", n->flags, indent + 1);
+	print_node_identifier(n->return_type, "return_type", indent + 1);
+}
+
+node_enum_def* new_node_enum_def(parser_context* parser) {
+	node_enum_def* data = (node_enum_def*)palloc(parser, sizeof(node_enum_def));
+	memset(data, 0, sizeof(node_enum_def));
+	data->type = NODE_ENUM_DEF;
+	return data;
+};
+
+node_enum_def* as_node_enum_def(node* n) {
+	return n->type == NODE_ENUM_DEF ? (node_enum_def*)n : NULL;
+}
+
+void print_node_enum_def(node_enum_def* n, const char* name, int indent) {
+	if(n == NULL)
+		return print_node((node*)n, name, indent);
+	if(name == NULL)
+		printf("%*sNODE_ENUM_DEF\n", indent * 4, "");
+	else
+		printf("%*s%s: NODE_ENUM_DEF\n", indent * 4, "", name);
+	print_string("name", n->name, indent + 1);
+	print_int("flags", n->flags, indent + 1);
+}
+
+node_identifier* new_node_identifier(parser_context* parser) {
+	node_identifier* data = (node_identifier*)palloc(parser, sizeof(node_identifier));
+	memset(data, 0, sizeof(node_identifier));
+	data->type = NODE_IDENTIFIER;
+	return data;
+};
+
+node_identifier* as_node_identifier(node* n) {
+	return n->type == NODE_IDENTIFIER ? (node_identifier*)n : NULL;
+}
+
+void print_node_identifier(node_identifier* n, const char* name, int indent) {
+	if(n == NULL)
+		return print_node((node*)n, name, indent);
+	if(name == NULL)
+		printf("%*sNODE_IDENTIFIER\n", indent * 4, "");
+	else
+		printf("%*s%s: NODE_IDENTIFIER\n", indent * 4, "", name);
+	print_string("name", n->name, indent + 1);
+	print_int("package", n->package, indent + 1);
+	print_int("pointer", n->pointer, indent + 1);
+	print_node_identifier(n->child, "child", indent + 1);
+}
+
+void print_node(node* node, const char* name, int indent)
 {
     if(node == NULL) {
-        printf("%*s NULL\n", indent, "");
+        if(name != NULL)
+            printf("%*s%s: NULL\n", indent * 4, "", name);
+        else
+            printf("%*sNULL\n", indent * 4, "");
         return;
     }
     
@@ -142,13 +328,25 @@ void print_node(node* node, int indent)
         case NODE_NULL:
             break;
 		case NODE_ROOT:
-			print_node_root((node_root*)node, indent + 1);
+			print_node_root((node_root*)node, name, indent);
 			break;
 		case NODE_PACKAGE_DEF:
-			print_node_package_def((node_package_def*)node, indent + 1);
+			print_node_package_def((node_package_def*)node, name, indent);
 			break;
-		case NODE_FUNCTION:
-			print_node_function((node_function*)node, indent + 1);
+		case NODE_CLASS_DEF:
+			print_node_class_def((node_class_def*)node, name, indent);
+			break;
+		case NODE_STRUCT_DEF:
+			print_node_struct_def((node_struct_def*)node, name, indent);
+			break;
+		case NODE_FUNCTION_DEF:
+			print_node_function_def((node_function_def*)node, name, indent);
+			break;
+		case NODE_ENUM_DEF:
+			print_node_enum_def((node_enum_def*)node, name, indent);
+			break;
+		case NODE_IDENTIFIER:
+			print_node_identifier((node_identifier*)node, name, indent);
 			break;
    }
 }

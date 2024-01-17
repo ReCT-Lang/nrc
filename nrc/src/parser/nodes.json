@@ -4,5 +4,28 @@
   },
   "node_package_def": {
     "package_name": "string"
+  },
+  "node_class_def": {
+    "name": "string",
+    "flags": "permissions"
+  },
+  "node_struct_def": {
+    "name": "string",
+    "flags": "permissions"
+  },
+  "node_function_def": {
+    "name": "string",
+    "flags": "permissions",
+    "return_type": "node_identifier"
+  },
+  "node_enum_def": {
+    "name": "string",
+    "flags": "permissions"
+  },
+  "node_identifier": {
+    "name": "string",
+    "package": "int",
+    "pointer": "int",
+    "child": "node_identifier"
   }
 }

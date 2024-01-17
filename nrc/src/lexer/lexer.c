@@ -4,6 +4,18 @@
 #include <string.h>
 #include "../errors/error.h"
 
+static int streq(char* a, char* b) {
+    int a_len = strlen(a);
+    int b_len = strlen(b);
+    if(a_len != b_len)
+        return 0;
+    for (int i = 0; i < a_len; ++i) {
+        if(a[i] != b[i])
+            return 0;
+    }
+    return 1;
+}
+
 static int peek(lexer_context* context, int amt) {
     if(context->position + amt >= context->data_length)
         return EOF;
@@ -19,8 +31,11 @@ static void step(lexer_context* context, int amt) {
         if(current(context) == EOF)
             break;
         if(current(context) == '\n') {
-            context->loc.column = 0;
+            context->loc.column = 1;
             context->loc.line++;
+        } else if(current(context) == '\t') {
+            // TODO: Decide if this is dumb.
+            context->loc.column += 4;
         } else {
             context->loc.column++;
         }
@@ -59,7 +74,7 @@ lexer_context* lexer_create() {
     lexer->token_count = 0;
     lexer->tokens_allocated = 0;
     lexer->tokens = NULL;
-    lexer->loc = (location){0, 0};
+    lexer->loc = (location){1, 1};
     return lexer;
 }
 
@@ -104,6 +119,9 @@ static void lex_string(lexer_context* context) {
     // Since read_buffer doesn't grow every iteration, we need to keep track of the allocated size.
     int length = 0;
     int buffer_size = 32;
+    token_t token;
+    token.loc = context->loc;
+    token.type = TOKEN_STRING;
 
     step(context, 1);
 
@@ -111,12 +129,12 @@ static void lex_string(lexer_context* context) {
         int c = current(context);
         if(c == EOF) {
             free(read_buffer);
-            error_throw("RCT1001", (location){0, 0}, "Unexpected EOF");
+            error_throw("RCT1011", context->loc, "Unexpected EOF");
             return;
         }
         if(c == '\n') {
             free(read_buffer);
-            error_throw("RCT1001", (location){0, 0}, "Unexpected newline");
+            error_throw("RCT1011", context->loc, "Unexpected newline");
             return;
         }
         if(c == '"') break;
@@ -142,6 +160,8 @@ static void lex_string(lexer_context* context) {
         step(context, 1);
     }
 
+    step(context, 1);
+
     // We might not need this resizing pass, since our buffer might already
     // be big enough, but just to be safe. I'll have to take a look at this :)
     // (preferably I'd like to cut this piece out since it's duplicate code)
@@ -158,14 +178,12 @@ static void lex_string(lexer_context* context) {
 
     // Then we build our token and push it.
     // DON'T FREE THE READ BUFFER!!!
-    token_t token;
     token.data = read_buffer;
-    token.type = TOKEN_STRING;
 
     push_token(context, token);
 }
 
-#define KW_CHECK(_s, _id) if(strcmp(token.data, _s) == 0) token.type = _id;
+#define KW_CHECK(_s, _id) if(streq(token.data, _s)) token.type = _id;
 
 // We treat ourselves to duplicate code for word tokenization.
 static void lex_word(lexer_context* context) {
@@ -176,6 +194,9 @@ static void lex_word(lexer_context* context) {
     // size.
     int length = 0;
     int buffer_size = 32;
+
+    token_t token;
+    token.loc = context->loc;
 
     int c;
     while (1) {
@@ -220,7 +241,6 @@ static void lex_word(lexer_context* context) {
 
     // Then we build our token and push it.
     // DON'T FREE THE READ BUFFER!!!
-    token_t token;
     token.data = read_buffer;
 
     // Time to do some string checking ig
@@ -228,6 +248,7 @@ static void lex_word(lexer_context* context) {
     else KW_CHECK("set", TOKEN_KW_SET)
     else KW_CHECK("extern", TOKEN_KW_EXTERN)
     else KW_CHECK("static", TOKEN_KW_STATIC)
+    else KW_CHECK("unsafe", TOKEN_KW_UNSAFE)
     else KW_CHECK("if", TOKEN_KW_IF)
     else KW_CHECK("else", TOKEN_KW_ELSE)
     else KW_CHECK("elif", TOKEN_KW_ELIF)
@@ -257,6 +278,9 @@ static void lex_numeric(lexer_context* context) {
     char* read_buffer = malloc(8);
     int length = 0;
     int buffer_size = 8;
+
+    token_t token;
+    token.loc = context->loc;
 
     int c;
     while (1) {
@@ -295,7 +319,6 @@ static void lex_numeric(lexer_context* context) {
 
     // Then we build our token and push it.
     // DON'T FREE THE READ BUFFER!!!
-    token_t token;
     token.data = read_buffer;
     token.type = TOKEN_NUMERIC;
 
@@ -363,7 +386,7 @@ void lexer_process(lexer_context* context) {
         if(is_char_word_starter(current(context))) { lex_word(context); continue; }
         if(is_char_numeric(current(context))) { lex_numeric(context); continue; }
         // For now, we just get mad :)
-        fprintf(stderr, "Invalid token %2X(%c)\n", current(context), current(context));
+        error_throw("RCT1010", context->loc, "Invalid token %2X(%c)", current(context), current(context));
     }
     push_empty_token(context, TOKEN_EOF);
 }

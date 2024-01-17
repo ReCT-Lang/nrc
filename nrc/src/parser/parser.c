@@ -7,8 +7,21 @@
 
 #define CAST(_to, _val) ((_to)_val)
 
+static void throw_invalid_token(token_t token) {
+    if(token.data == NULL)
+        error_throw("RCT2001", token.loc, "Unexpected token %s", TOKEN_NAMES[token.type]);
+    else
+        error_throw("RCT2001", token.loc, "Unexpected token %s (%s)", token.data, TOKEN_NAMES[token.type]);
+}
+
 void* palloc(parser_context* context, int size) {
     return msalloc(context->allocation_stack, size);
+}
+
+static string copy_string(parser_context* context, string src) {
+    string str = (string)palloc(context, (int)strlen(src) + 1);
+    strcpy(str, src);
+    return str;
 }
 
 static token_t peek(parser_context* parser, int amt) {
@@ -23,6 +36,10 @@ static token_t current(parser_context* parser) {
     return peek(parser, 0);
 }
 
+static int at(parser_context* parser, token_type_e type) {
+    return current(parser).type == type;
+}
+
 static void step(parser_context* parser, int amt) {
     parser->token_current += amt;
 }
@@ -31,9 +48,8 @@ static token_t consume(parser_context* parser, token_type_e type) {
     token_t c = current(parser);
     step(parser, 1);
     if(c.type != type) {
-        // TODO: Proper exception throwing
-        fprintf(stderr, "Expected token %s, got %s\n", TOKEN_NAMES[type], TOKEN_NAMES[c.type]);
-        exit(1);
+        error_throw("RCT2002", current(parser).loc, "Unexpected token %s, expected %s",
+                    TOKEN_NAMES[c.type], TOKEN_NAMES[type]);
     }
     return c;
 }
@@ -53,26 +69,141 @@ void parser_destroy(parser_context* parser) {
     free(parser);
 }
 
+static node_identifier* parse_identifier(parser_context* parser, int level) {
+
+    int reference = 0;
+    if(at(parser, TOKEN_KW_REF)) {
+        if(level != 0) {
+            error_throw("RCT2011", current(parser).loc, "Reference declarations may only be top-level");
+        }
+        reference = 1;
+        consume(parser, TOKEN_KW_REF);
+    }
+
+    token_t id = consume(parser, TOKEN_ID);
+
+    node_identifier* identifier = new_node_identifier(parser);
+    identifier->pointer = reference;
+    identifier->name = copy_string(parser, id.data);
+
+    if(at(parser, TOKEN_PACKAGE_ACCESS)) {
+        if(level > 0)
+            error_throw("RCT2010", current(parser).loc, "Package access may not be nested!");
+        consume(parser, TOKEN_PACKAGE_ACCESS);
+        identifier->child = parse_identifier(parser, level + 1);
+        identifier->package = 1;
+    } else if(at(parser, TOKEN_ACCESS)) {
+        consume(parser, TOKEN_ACCESS);
+        identifier->child = parse_identifier(parser, level + 1);
+    }
+
+    return identifier;
+}
+
 static node_package_def* parse_package(parser_context* parser) {
     consume(parser, TOKEN_KW_PACKAGE);
 
     token_t name = consume(parser, TOKEN_ID);
     node_package_def* root_node = new_node_package_def(parser);
 
-    root_node->package_name = palloc(parser, (int)strlen(name.data) + 1);
-    strcpy(root_node->package_name, name.data);
+    root_node->package_name = copy_string(parser, name.data);
 
     consume(parser, TOKEN_END_STMT);
 
     return root_node;
 }
 
-static node* parse_anything(parser_context* parser) {
+static node_function_def* parse_function(parser_context* parser, permissions perms) {
+    consume(parser, TOKEN_KW_FUNCTION);
+    node_function_def* function = new_node_function_def(parser);
+    function->flags = perms;
+
+    token_t function_name = consume(parser, TOKEN_ID);
+    function->name = copy_string(parser, function_name.data);
+
+
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    while (1) {
+        if(current(parser).type == TOKEN_PARENTHESIS_CLOSE)
+            break;
+
+        token_t name = consume(parser, TOKEN_ID);
+        node_identifier* type = parse_identifier(parser, 0);
+
+        // TODO: Push these to a list
+
+        if(current(parser).type == TOKEN_PARENTHESIS_CLOSE)
+            break;
+        consume(parser, TOKEN_COMMA);
+    }
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    if(current(parser).type == TOKEN_ACCESS) {
+        consume(parser, TOKEN_ACCESS);
+        // For now, we don't support custom types, just raw IDs.
+        node_identifier* returnType = parse_identifier(parser, 0);
+        function->return_type = returnType;
+    }
+
+    // Extern functions may not have a body.
+    if(perms & PERMS_EXTERN) {
+        consume(parser, TOKEN_END_STMT);
+        return function;
+    }
+
+    // TODO: Body parsing(in another function)
+    consume(parser, TOKEN_BRACE_OPEN);
+    while (current(parser).type != TOKEN_BRACE_CLOSE) step(parser, 1);
+    consume(parser, TOKEN_BRACE_CLOSE);
+
+    return function;
+}
+
+static node* parse_definition(parser_context* parser) {
+    permissions perms = PERMS_NONE;
+
+    while (1) {
+        if(current(parser).type == TOKEN_KW_VAR) {
+            perms |= PERMS_PRIVATE;
+            consume(parser, TOKEN_KW_VAR);
+        } else if(current(parser).type == TOKEN_KW_SET) {
+            perms |= PERMS_PUBLIC;
+            consume(parser, TOKEN_KW_SET);
+        } else if(current(parser).type == TOKEN_KW_STATIC) {
+            perms |= PERMS_STATIC;
+            consume(parser, TOKEN_KW_STATIC);
+        } else if(current(parser).type == TOKEN_KW_UNSAFE) {
+            perms |= PERMS_UNSAFE;
+            consume(parser, TOKEN_KW_UNSAFE);
+        } else if(current(parser).type == TOKEN_KW_EXTERN) {
+            perms |= PERMS_EXTERN;
+            consume(parser, TOKEN_KW_EXTERN);
+        }
+        else if(current(parser).type == TOKEN_KW_FUNCTION) {
+            return (node*)parse_function(parser, perms);
+        }
+        else {
+            throw_invalid_token(current(parser));
+            break;
+        }
+    }
+
+    return NULL;
+}
+
+// Top-level statements, so, package includes, class, enum, function, struct & global defines
+static node* parse_top(parser_context* parser) {
     token_t c = current(parser);
 
     if(c.type == TOKEN_KW_PACKAGE) return (node*) parse_package(parser);
+    if(c.type == TOKEN_KW_SET) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_VAR) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_STATIC) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_EXTERN) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_UNSAFE) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_FUNCTION) return (node*) parse_function(parser, PERMS_PRIVATE);
 
-    error_throw("RCT2001", (location){0, 0}, "Unexpected token %s", TOKEN_NAMES[c.type]);
+    throw_invalid_token(c);
     step(parser, 1);
     return NULL;
 }
@@ -82,6 +213,8 @@ void parser_parse(parser_context* parser) {
     parser->node = (node*)root_node;
 
     while(current(parser).type != TOKEN_EOF) {
-        list_push(parser, root_node->children, parse_anything(parser));
+        node* n = parse_top(parser);
+        if(n != NULL)
+            list_push(parser, root_node->children, n);
     }
 }
