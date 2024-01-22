@@ -55,5 +55,5 @@ dkms.conf
 ## Custom stuff
 
 !build.d
-.idea
+.idea/
 nrc
