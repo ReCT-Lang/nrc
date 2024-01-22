@@ -30,7 +30,7 @@ We don't have too strict rules on code formatting. There are a couple of things 
 - Try to stay standard conformant and cross-platform, i.e. no win32 API calls. The "official" compiler we use is however
     GCC, so we can permit certain GCC-only functionality where needed(however we recommend you use preproc flags for them)
 
-If unsure of something, just look at the existing code and judge yourself.
+If unsure of something, just look at the existing code and judge by yourself.
 
 ## New features
 As we stray to provide solid standardization for the project(i.e, ReCT and SSRM lang/VM specs), new features take a
