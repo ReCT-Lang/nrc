@@ -59,6 +59,10 @@ HDR:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.h)) $(patsubst %.hgen.py,%.h,$
 RCT:=$(wildcard src/r_test/*.rct)
 OBJ:=$(patsubst %.c,%.o,$(SRC))
 
+# Valid flags:
+# - NRC_JOKES - Allows some non-spec features
+FLAGS:=
+
 DEPS=$(SRC:.c=.d) build.d
 
 MKDIR:=mkdir -p
@@ -89,7 +93,7 @@ $(BIN):
 
 %.o: %.c
 	$(info [CC] BUILDING $< => $@)
-	@$(CC) $(CCFLAGS) -MMD -MP -c $< -o $@
+	@$(CC) $(CCFLAGS) $(foreach flag,$(FLAGS),-D$(flag)) -MMD -MP -c $< -o $@
 
 obj: $(OBJ)
 

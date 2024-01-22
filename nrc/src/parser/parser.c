@@ -4,8 +4,12 @@
 #include "nodes.h"
 #include "../errors/error.h"
 
-
 #define CAST(_to, _val) ((_to)_val)
+
+static node_function_body* parse_function_body(parser_context* parser);
+static node* parse_statement(parser_context* parser);
+static node* parse_class_body(parser_context* parser);
+static node_variable_def* parse_variable_definition(parser_context* parser, permissions perms);
 
 static void throw_invalid_token(token_t token) {
     if(token.data == NULL)
@@ -113,6 +117,27 @@ static node_package_def* parse_package(parser_context* parser) {
     return root_node;
 }
 
+static node_class_def* parse_class(parser_context* parser, permissions perms) {
+    consume(parser, TOKEN_KW_CLASS);
+    node_class_def* class = new_node_class_def(parser);
+
+    token_t name = consume(parser, TOKEN_ID);
+    class->name = copy_string(parser, name.data);
+    class->flags = perms;
+
+    consume(parser, TOKEN_BRACE_OPEN);
+
+    while (!at(parser, TOKEN_BRACE_CLOSE)) {
+        node* child = parse_class_body(parser);
+        if(child != NULL)
+            list_push(parser, class->children, child);
+    }
+    consume(parser, TOKEN_BRACE_CLOSE);
+
+
+    return class;
+}
+
 static node_function_def* parse_function(parser_context* parser, permissions perms) {
     consume(parser, TOKEN_KW_FUNCTION);
     node_function_def* function = new_node_function_def(parser);
@@ -152,9 +177,8 @@ static node_function_def* parse_function(parser_context* parser, permissions per
     }
 
     // TODO: Body parsing(in another function)
-    consume(parser, TOKEN_BRACE_OPEN);
-    while (current(parser).type != TOKEN_BRACE_CLOSE) step(parser, 1);
-    consume(parser, TOKEN_BRACE_CLOSE);
+
+    function->body = parse_function_body(parser);
 
     return function;
 }
@@ -163,9 +187,9 @@ static node* parse_definition(parser_context* parser) {
     permissions perms = PERMS_NONE;
 
     while (1) {
-        if(current(parser).type == TOKEN_KW_VAR) {
+        if(current(parser).type == TOKEN_KW_PRIVATE) {
             perms |= PERMS_PRIVATE;
-            consume(parser, TOKEN_KW_VAR);
+            consume(parser, TOKEN_KW_PRIVATE);
         } else if(current(parser).type == TOKEN_KW_SET) {
             perms |= PERMS_PUBLIC;
             consume(parser, TOKEN_KW_SET);
@@ -178,11 +202,13 @@ static node* parse_definition(parser_context* parser) {
         } else if(current(parser).type == TOKEN_KW_EXTERN) {
             perms |= PERMS_EXTERN;
             consume(parser, TOKEN_KW_EXTERN);
-        }
-        else if(current(parser).type == TOKEN_KW_FUNCTION) {
+        } else if(current(parser).type == TOKEN_KW_FUNCTION) {
             return (node*)parse_function(parser, perms);
-        }
-        else {
+        } else if(current(parser).type == TOKEN_KW_CLASS) {
+            return (node*)parse_class(parser, perms);
+        } else if(current(parser).type == TOKEN_KW_VAR) {
+            return (node*) parse_variable_definition(parser, perms);
+        } else {
             throw_invalid_token(current(parser));
             break;
         }
@@ -191,17 +217,90 @@ static node* parse_definition(parser_context* parser) {
     return NULL;
 }
 
+static node_function_body* parse_function_body(parser_context* parser) {
+    consume(parser, TOKEN_BRACE_OPEN);
+
+    node_function_body* body = new_node_function_body(parser);
+
+    while (!at(parser, TOKEN_BRACE_CLOSE)) {
+        node* stmt = parse_statement(parser);
+        if(stmt != NULL)
+            list_push(parser, body->children, stmt);
+    }
+    consume(parser, TOKEN_BRACE_CLOSE);
+
+    return body;
+}
+
+static node* parse_statement(parser_context* parser) {
+    token_t c = current(parser);
+
+    if(c.type == TOKEN_KW_VAR) return (node*)parse_variable_definition(parser, PERMS_NONE);
+
+    step(parser, 1);
+    return NULL;
+}
+
+static node_variable_def* parse_variable_definition(parser_context* parser, permissions perms) {
+
+    // [permissions*] [name*] -> [type] <- [value]
+    // * - mandatory
+    // We either need a type or a value, but we'll leave that for
+    // later determination.
+
+    consume(parser, TOKEN_KW_VAR);
+
+    node_variable_def* def = new_node_variable_def(parser);
+    def->flags = perms;
+    def->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+
+    // We've got a type.
+    if(at(parser, TOKEN_ACCESS)) {
+        consume(parser, TOKEN_ACCESS);
+        def->value_type = parse_identifier(parser, 0);
+    }
+
+    if(at(parser, TOKEN_ASSIGN)) {
+        consume(parser, TOKEN_ASSIGN);
+        // TODO: We need to parse some sort of statement.
+    }
+
+    consume(parser, TOKEN_END_STMT);
+
+    return def;
+}
+
 // Top-level statements, so, package includes, class, enum, function, struct & global defines
 static node* parse_top(parser_context* parser) {
     token_t c = current(parser);
 
     if(c.type == TOKEN_KW_PACKAGE) return (node*) parse_package(parser);
+
     if(c.type == TOKEN_KW_SET) return (node*) parse_definition(parser);
-    if(c.type == TOKEN_KW_VAR) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_PRIVATE) return (node*) parse_definition(parser);
     if(c.type == TOKEN_KW_STATIC) return (node*) parse_definition(parser);
     if(c.type == TOKEN_KW_EXTERN) return (node*) parse_definition(parser);
     if(c.type == TOKEN_KW_UNSAFE) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_VAR) return (node*) parse_variable_definition(parser, PERMS_PRIVATE);
     if(c.type == TOKEN_KW_FUNCTION) return (node*) parse_function(parser, PERMS_PRIVATE);
+    if(c.type == TOKEN_KW_CLASS) return (node*) parse_class(parser, PERMS_PRIVATE);
+
+    throw_invalid_token(c);
+    step(parser, 1);
+    return NULL;
+}
+
+static node* parse_class_body(parser_context* parser) {
+    token_t c = current(parser);
+
+    if(c.type == TOKEN_KW_SET) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_PRIVATE) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_STATIC) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_EXTERN) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_UNSAFE) return (node*) parse_definition(parser);
+    if(c.type == TOKEN_KW_VAR) return (node*) parse_variable_definition(parser, PERMS_PRIVATE);
+    if(c.type == TOKEN_KW_FUNCTION) return (node*) parse_function(parser, PERMS_PRIVATE);
+    if(c.type == TOKEN_KW_CLASS) return (node*) parse_class(parser, PERMS_PRIVATE);
 
     throw_invalid_token(c);
     step(parser, 1);

@@ -7,6 +7,7 @@ typedef enum token_type_e {
     TOKEN_EOF,
 
     TOKEN_KW_VAR,
+    TOKEN_KW_PRIVATE,
     TOKEN_KW_SET,
     TOKEN_KW_EXTERN,
     TOKEN_KW_STATIC,

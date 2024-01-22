@@ -88,7 +88,7 @@ void lexer_destroy(lexer_context* context) {
 }
 
 static int look_ahead_equals(lexer_context* context, const char* str) {
-    int length = strlen(str);
+    unsigned long length = strlen(str);
     for (int i = 0; i < length; ++i) {
         int at = peek(context, i);
         if(at != str[i])
@@ -245,6 +245,7 @@ static void lex_word(lexer_context* context) {
 
     // Time to do some string checking ig
     KW_CHECK("var", TOKEN_KW_VAR)
+    else KW_CHECK("private", TOKEN_KW_PRIVATE)
     else KW_CHECK("set", TOKEN_KW_SET)
     else KW_CHECK("extern", TOKEN_KW_EXTERN)
     else KW_CHECK("static", TOKEN_KW_STATIC)
@@ -265,6 +266,13 @@ static void lex_word(lexer_context* context) {
     else KW_CHECK("use", TOKEN_KW_USE)
     else KW_CHECK("alias", TOKEN_KW_ALIAS)
     else KW_CHECK("ref", TOKEN_KW_REF)
+
+#ifdef NRC_JOKES
+#warning Jokes are enabled. They are not part of the spec
+    // And the joke-y ones
+    else KW_CHECK("mine", TOKEN_KW_PRIVATE)
+#endif
+
     else token.type = TOKEN_ID;
 
     push_token(context, token);
