@@ -10,7 +10,46 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="baa8d7cc-37de-48c3-988c-affa069cacae" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/CONTRIBUTING.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/Makefile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/build.d" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/docs/ACCESS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/memstack" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/scripts/generate_token_table.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/cli/main.c" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/errors/error.c" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/errors/error.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/lexer/lexer.c" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/lexer/lexer.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/lexer/location.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/lexer/token.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/lexer/token_names.c" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/parser/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/parser/node_impl.c" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/parser/nodes.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/parser/nodes.hgen.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/parser/nodes.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/parser/parser.c" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/parser/parser.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/r_test/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/r_test/_test_simple.rct" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/nrc/src/r_test/test_simple.rct" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/Makefile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/doc/IDEOLOGY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/src/cli/main.c" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ssrm/ssrm" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,9 +68,9 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 8
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
   <component name="ProjectId" id="2YrT1K4tCLrCVq9D8xfJz2PgKHt" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -42,11 +81,13 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
     "WebServerToolWindowFactoryState": "false",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "/home/khhs/Documents/ssrm/nrc/Makefile",
+    "last_opened_file_path": "/home/khhs/Documents/ssrm",
+    "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "MakefileSettings",
     "vue.rearranger.settings.migration": "true"
   }
@@ -60,6 +101,7 @@
       <option name="presentableId" value="Default" />
       <updated>1701282488105</updated>
       <workItem from="1701282488115" duration="143000" />
+      <workItem from="1705950909065" duration="248000" />
     </task>
     <servers />
   </component>

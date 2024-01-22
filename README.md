@@ -1,7 +1,4 @@
-# Somewhat Scuffed ReCT Machine
-Somewhat Scuffed ReCT Machine(ssrm) is a simple stack-based virtual machine
-for working with the ReCT Programming Language.
+# New ReCT Compiler
+New ReCT Compiler is a project aiming to standardize and finally properly make ReCT an established product.
 
-This repo should hopefully also contain a ReCT compiler some day(tm).
-
-For now, we just host design proposals
+The compiler is written in C and is aiming to target a custom virtual machine(still in the works)
