@@ -33,6 +33,7 @@
 #	CCFLAGS - The C compiler flags
 #	LDFLAGS - The C linker flags
 #	LIBRARY - The C linker libraries
+#	FLAGS - Various flags that may be set for compilation.
 
 ## Targets
 

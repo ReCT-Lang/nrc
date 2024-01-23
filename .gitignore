@@ -54,6 +54,8 @@ dkms.conf
 
 ## Custom stuff
 
+src/parser/nodes.h
+
 !build.d
 .idea/
 nrc
