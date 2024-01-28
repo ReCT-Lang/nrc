@@ -168,9 +168,59 @@ node* parse_variable_definition(parser_context* parser, permissions perms) {
 }
 
 node* parse_function_definition(parser_context* parser, permissions perms) {
-    consume(parser, TOKEN_KW_FUNCTION);
     node_function_def* function_def = new_node_function_def(parser);
     function_def->flags = perms;
+
+    // Syntax:
+    // [modifiers] function [name]([parameters]) (-> [return type])
+    // Then either { [body] } or a semicolon, depending on the function declaration.
+    // Modifiers are already handled.
+    // No return type means it's a void.
+    consume(parser, TOKEN_KW_FUNCTION);
+
+    // [name]
+    function_def->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+
+    // Parameters
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    if(!at(parser, TOKEN_PARENTHESIS_CLOSE)) { // If we're not immediately at a close there's values.
+        while (1) {
+
+            // A parameter is
+            // [name] [type] (*<- [default value])
+            // Followed by a comma if there's multiple.
+
+            node_parameter* parameter = new_node_parameter(parser);
+            parameter->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+            parameter->value_type = parse_identifier(parser);
+
+            if(at(parser, TOKEN_ASSIGN)) {
+                consume(parser, TOKEN_ASSIGN);
+                parameter->default_value = parse_statement(parser, 0);
+            }
+
+            list_push(parser, function_def->parameters, (node*)parameter);
+
+            if(!at(parser, TOKEN_COMMA))
+                break;
+
+            consume(parser, TOKEN_COMMA);
+        }
+    }
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    if(at(parser, TOKEN_ASSIGN)) {
+        consume(parser, TOKEN_ASSIGN);
+        function_def->return_type = parse_identifier(parser);
+    }
+
+    // Extern functions don't declare a body
+    if(perms &= PERMS_EXTERN) {
+        consume(parser, TOKEN_END_STMT);
+        return (node*)function_def;
+    }
+
+    // TODO: Function body parsing.
 
     return (node*)function_def;
 }

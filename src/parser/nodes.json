@@ -21,7 +21,8 @@
     "name": "string",
     "flags": "permissions",
     "return_type": "node_identifier",
-    "body": "node_function_body"
+    "body": "node_function_body",
+    "parameters": "node_list"
   },
   "node_enum_def": {
     "name": "string",
@@ -39,6 +40,11 @@
   "node_variable_def": {
     "name": "string",
     "flags": "permissions",
+    "value_type": "node_identifier",
+    "default_value": "node"
+  },
+  "node_parameter": {
+    "name": "string",
     "value_type": "node_identifier",
     "default_value": "node"
   },
