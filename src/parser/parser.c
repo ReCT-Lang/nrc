@@ -91,9 +91,8 @@ node_identifier* parse_identifier(parser_context* parser)  {
     }
 
     // If it's not a package access, we first handle generics, then child identifiers.
-    // TODO: Array access & generics currently interfere w/ each other. Fix.
-    if(at(parser, TOKEN_BRACKET_OPEN)) {
-        consume(parser, TOKEN_BRACKET_OPEN);
+    if(at(parser, TOKEN_BRACE_OPEN)) {
+        consume(parser, TOKEN_BRACE_OPEN);
         while (1) {
             // We get the generic value
             node* generic = parse_statement(parser, 0);
@@ -107,8 +106,8 @@ node_identifier* parse_identifier(parser_context* parser)  {
 
             consume(parser, TOKEN_COMMA);
         }
-        // And then end it with the closing bracket.
-        consume(parser, TOKEN_BRACKET_CLOSE);
+        // And then end it with the closing brace.
+        consume(parser, TOKEN_BRACE_CLOSE);
     }
 
     // Now let's get our child if it exists.
