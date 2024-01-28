@@ -4,8 +4,8 @@ that we should try and give each one a purpose.
 
 | Name    | Effect                                   |
 |---------|------------------------------------------|
-| private | private                                  |
-| set     | public                                   |
+| private | May only be accessed within scope        |
+| set     | May be accessed outside scope            |
 | static  | class-wide(not on instances)             |
 | unsafe  | unmanaged code allowed(pointers)         |
 | extern  | External(may not define function body)   |
