@@ -22,9 +22,9 @@ resolved from external binaries.
 
 ## Valid access modifiers on different "items"
 
-| Item      | Valid modifiers                  |
-|-----------|----------------------------------|
-| variables | var, set, static, extern         |
-| functions | var, set, static, unsafe, extern |
-| classes   | var, set, static, unsafe         |
-| structs   | var, set, unsafe                 |
+| Item      | Valid modifiers                      |
+|-----------|--------------------------------------|
+| variables | private, set, static, extern         |
+| functions | private, set, static, unsafe, extern |
+| classes   | private, set, static, unsafe         |
+| structs   | private, set, unsafe                 |
