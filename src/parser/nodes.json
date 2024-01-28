@@ -51,5 +51,23 @@
   },
   "node_literal": {
     "value": "string"
+  },
+  "node_assignation": {
+    "operator": "operators",
+    "target": "node_identifier",
+    "value": "node"
+  },
+  "node_unary_exp": {
+    "operator": "operators",
+    "operand": "node"
+  },
+  "node_binary_exp": {
+    "operator": "operators",
+    "left": "node",
+    "right": "node"
+  },
+  "node_function_call": {
+    "target": "node_identifier",
+    "parameters": "node_list"
   }
 }

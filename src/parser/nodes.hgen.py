@@ -23,6 +23,14 @@ typedef enum permissions {
     PERMS_NONE = 0
 } permissions;
 
+typedef enum operators {
+    OP_NONE,
+    OP_ADD,
+    OP_SUBTRACT,
+    OP_DIVIDE,
+    OP_MULTIPLY
+} operators;
+
 typedef enum {
 \tNODE_NULL,
 \t'''
@@ -140,6 +148,8 @@ for t in definitions.keys():
         elif fields[name] == "int":
             output += "\tprint_int(\"" + name + "\", n->" + name + ", indent + 1);\n"
         elif fields[name] == "permissions":  # Perms is just an int for now.
+            output += "\tprint_int(\"" + name + "\", n->" + name + ", indent + 1);\n"
+        elif fields[name] == "operators":  # Same for operators
             output += "\tprint_int(\"" + name + "\", n->" + name + ", indent + 1);\n"
         elif fields[name] == "node":
             output += "\tprint_node(n->" + name + ", \"\", indent + 1);\n"

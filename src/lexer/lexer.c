@@ -382,6 +382,9 @@ void lexer_process(lexer_context* context) {
         CASE_SIMPLE_MULT("<=", TOKEN_OP_LT_EQUALS)
         CASE_SIMPLE_MULT(">=", TOKEN_OP_GR_EQUALS)
 
+        CASE_SIMPLE_MULT("++", TOKEN_INCREMENT)
+        CASE_SIMPLE_MULT("--", TOKEN_DECREMENT)
+
         CASE_SIMPLE('=', TOKEN_OP_EQUALS)
 
         CASE_SIMPLE('<', TOKEN_OP_LT)
