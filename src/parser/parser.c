@@ -131,6 +131,21 @@ static operators get_operator(token_type_e type) {
     }
 }
 
+node_body* parse_body(parser_context* parser) {
+    consume(parser, TOKEN_BRACE_OPEN);
+    node_body* body = new_node_body(parser);
+
+    while (!at(parser, TOKEN_BRACE_CLOSE)) {
+        node* stmt = parse_statement(parser, 1);
+        if(stmt != NULL) {
+            list_push(parser, body->children, stmt);
+        }
+    }
+    consume(parser, TOKEN_BRACE_CLOSE);
+
+    return body;
+}
+
 node_literal* parse_literal(parser_context* parser) {
     node_literal* literal = new_node_literal(parser);
     literal->value = copy_string(parser, current(parser).data);
@@ -284,6 +299,7 @@ node* parse_function_definition(parser_context* parser, permissions perms) {
     }
 
     // TODO: Function body parsing.
+    function_def->body = parse_body(parser);
 
     return (node*)function_def;
 }
@@ -317,13 +333,19 @@ node* parse_class_definition(parser_context* parser, permissions perms) {
 
     // TODO: Class body
 
+    class_def->body = parse_body(parser);
+
     return (node*)class_def;
 }
 
 node* parse_struct_definition(parser_context* parser, permissions perms) {
-    consume(parser, TOKEN_KW_STRUCT);
     node_struct_def* struct_def = new_node_struct_def(parser);
     struct_def->flags = perms;
+
+    // Structs are like low-level classes.
+    consume(parser, TOKEN_KW_STRUCT);
+    struct_def->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+    struct_def->body = parse_body(parser);
 
     return (node*)struct_def;
 }
@@ -475,6 +497,38 @@ static node* parse_binary_expression(parser_context* parser, int parent_preceden
     return left;
 }
 
+static node_make* parse_make(parser_context* parser) {
+    node_make* make = new_node_make(parser);
+    consume(parser, TOKEN_KW_MAKE);
+
+    make->target = parse_identifier(parser);
+
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    if(!at(parser, TOKEN_PARENTHESIS_CLOSE)) {
+        while (1) {
+            node *value = parse_expression(parser);
+            if (value != NULL)
+                list_push(parser, make->parameters, value);
+            if (!at(parser, TOKEN_COMMA))
+                break;
+            consume(parser, TOKEN_COMMA);
+        }
+    }
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    return make;
+}
+
+static node_return* parse_return(parser_context* parser) {
+    node_return* return_stmt = new_node_return(parser);
+
+    consume(parser, TOKEN_KW_RETURN);
+
+    return_stmt->value = parse_expression(parser);
+
+    return return_stmt;
+}
+
 static node* parse_expression(parser_context* parser) {
     int parser_old_location = parser->token_current;
 
@@ -521,6 +575,10 @@ static node* parse_expression(parser_context* parser) {
         }
     }
 
+    if(at(parser, TOKEN_KW_MAKE)) {
+        return parse_make(parser);
+    }
+
     parser->token_current = parser_old_location;
 
     return parse_binary_expression(parser, 0);
@@ -550,6 +608,9 @@ node* parse_statement(parser_context* parser, int semicolon) {
     if(at(parser, TOKEN_KW_FUNCTION)) PARSE(0, parse_definition(parser))
     if(at(parser, TOKEN_KW_CLASS)) PARSE(0, parse_definition(parser))
     if(at(parser, TOKEN_KW_STRUCT)) PARSE(0, parse_definition(parser))
+
+    // Return
+    if(at(parser, TOKEN_KW_RETURN)) PARSE(1, parse_return(parser))
 
     // Finally, we do expressions.
     PARSE(1, parse_expression(parser))
