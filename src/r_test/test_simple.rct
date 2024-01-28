@@ -1,8 +1,9 @@
 package sys; // Include the sys package
+use sys; // Use the sys package
 
 extern function malloc(long size) -> ref[std::void];
 
-var array_top_level -> array[string];
+var array_top_level -> array[string, 5];
 var array_deep -> array[array[string]];
 
 class MyType {

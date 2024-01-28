@@ -5,6 +5,9 @@
   "node_package_def": {
     "package_name": "string"
   },
+  "node_use_def": {
+    "package_name": "string"
+  },
   "node_class_def": {
     "name": "string",
     "flags": "permissions",
@@ -38,5 +41,8 @@
     "flags": "permissions",
     "value_type": "node_identifier",
     "default_value": "node"
+  },
+  "node_literal": {
+    "value": "string"
   }
 }
