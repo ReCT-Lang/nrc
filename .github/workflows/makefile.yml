@@ -8,10 +8,10 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Build project
       run: make all
