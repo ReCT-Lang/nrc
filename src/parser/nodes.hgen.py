@@ -95,6 +95,10 @@ node_list* new_node_list(parser_context* context) {
 };
 
 static void print_node_list(const char* name, node_list* list, int indent) {
+    if(list->length == 0) {
+        printf("%*s%s: NULL\\n", indent * 4, "", name);
+        return;
+    }
     printf("%*s%s:\\n", indent * 4, "", name);
     for (int i = 0; i < list->length; ++i) {
         print_node(list->data[i], NULL, indent + 1);
@@ -152,7 +156,7 @@ for t in definitions.keys():
         elif fields[name] == "operators":  # Same for operators
             output += "\tprint_int(\"" + name + "\", n->" + name + ", indent + 1);\n"
         elif fields[name] == "node":
-            output += "\tprint_node(n->" + name + ", \"\", indent + 1);\n"
+            output += "\tprint_node(n->" + name + ", \"" + name + "\", indent + 1);\n"
         elif fields[name] in definitions:
             output += "\tprint_" + fields[name] + "(n->" + name + ", \"" + name + "\", indent + 1);\n"
 
