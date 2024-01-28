@@ -408,11 +408,22 @@ void lexer_read(lexer_context* lexer, FILE* file) {
     long size = ftell(file);
     fseek(file, pos, SEEK_SET);
 
-    lexer->data = realloc(lexer->data, lexer->data_length + size);
+    void* new_buffer = realloc(lexer->data, lexer->data_length + size);
+    if(new_buffer == NULL)
+        return;
+
+    lexer->data = new_buffer;
     fread(lexer->data + lexer->data_length, sizeof(char), size, file);
     lexer->data_length += size;
 }
 
-void lexer_push(lexer_context* context, char* data, int length) {
+void lexer_push(lexer_context* lexer, char* data, int length) {
 
+    void* new_buffer = realloc(lexer->data, lexer->data_length + length);
+    if(new_buffer == NULL)
+        return;
+
+    lexer->data = new_buffer;
+    memcpy(lexer->data + lexer->data_length, data, length);
+    lexer->data_length += length;
 }
