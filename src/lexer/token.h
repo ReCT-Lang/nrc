@@ -37,6 +37,9 @@ typedef enum token_type_e {
     TOKEN_TRUE,
     TOKEN_FALSE,
 
+    TOKEN_INCREMENT,
+    TOKEN_DECREMENT,
+
     TOKEN_OP_PLUS,
     TOKEN_OP_MINUS,
     TOKEN_OP_MOD,
@@ -67,7 +70,11 @@ typedef enum token_type_e {
 
     TOKEN_PACKAGE_ACCESS,
 
-    TOKEN_END_STMT
+    TOKEN_END_STMT,
+
+    // These are just for ease-of-work
+    TOKEN_GENERIC_OPEN = TOKEN_BRACKET_OPEN,
+    TOKEN_GENERIC_CLOSE = TOKEN_BRACKET_CLOSE,
 
 } token_type_e;
 

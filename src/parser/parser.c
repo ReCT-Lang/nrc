@@ -5,6 +5,7 @@
 #include "../errors/error.h"
 
 static node* parse_statement(parser_context* parser, int semicolon);
+static node* parse_expression(parser_context* parser);
 
 static void throw_invalid_token(token_t token) {
     if(token.data == NULL)
@@ -68,6 +69,83 @@ void parser_destroy(parser_context* parser) {
     free(parser);
 }
 
+static int unary_op_precedence(token_type_e type) {
+    switch (type) {
+        case TOKEN_ASSIGN_PLUS:
+        case TOKEN_ASSIGN_MINUS:
+        case TOKEN_OP_NOT:
+            return 6;
+
+        default:
+            return 0;
+    }
+}
+
+static int binary_op_precedence(token_type_e type) {
+    switch (type) {
+        case TOKEN_OP_STAR:
+        case TOKEN_OP_SLASH:
+        case TOKEN_OP_MOD:
+            return 5;
+
+        case TOKEN_OP_PLUS:
+        case TOKEN_OP_MINUS:
+            return 4;
+
+        case TOKEN_OP_EQUALS:
+        case TOKEN_OP_NOT_EQUALS:
+        case TOKEN_OP_LT:
+        case TOKEN_OP_GT:
+        case TOKEN_OP_LT_EQUALS:
+        case TOKEN_OP_GR_EQUALS: // TODO: Bitshifts
+            return 3;
+
+        // TODO: Ampersand
+        // TODO: Pipes & Hats
+
+        default:
+            return 0;
+    }
+}
+
+static operators get_operator(token_type_e type) {
+    switch (type) {
+        case TOKEN_ASSIGN_DIVIDE:
+            return OP_DIVIDE;
+        case TOKEN_ASSIGN_MULTIPLY:
+            return OP_MULTIPLY;
+        case TOKEN_ASSIGN_PLUS:
+            return OP_ADD;
+        case TOKEN_ASSIGN_MINUS:
+            return OP_SUBTRACT;
+        case TOKEN_OP_PLUS:
+            return OP_ADD;
+        case TOKEN_OP_MINUS:
+            return OP_SUBTRACT;
+        case TOKEN_OP_STAR:
+            return OP_MULTIPLY;
+        case TOKEN_OP_SLASH:
+            return OP_DIVIDE;
+        default:
+            return OP_NONE;
+    }
+}
+
+node_body* parse_body(parser_context* parser) {
+    consume(parser, TOKEN_BRACE_OPEN);
+    node_body* body = new_node_body(parser);
+
+    while (!at(parser, TOKEN_BRACE_CLOSE)) {
+        node* stmt = parse_statement(parser, 1);
+        if(stmt != NULL) {
+            list_push(parser, body->children, stmt);
+        }
+    }
+    consume(parser, TOKEN_BRACE_CLOSE);
+
+    return body;
+}
+
 node_literal* parse_literal(parser_context* parser) {
     node_literal* literal = new_node_literal(parser);
     literal->value = copy_string(parser, current(parser).data);
@@ -91,8 +169,8 @@ node_identifier* parse_identifier(parser_context* parser)  {
     }
 
     // If it's not a package access, we first handle generics, then child identifiers.
-    if(at(parser, TOKEN_BRACE_OPEN)) {
-        consume(parser, TOKEN_BRACE_OPEN);
+    if(at(parser, TOKEN_GENERIC_OPEN)) {
+        consume(parser, TOKEN_GENERIC_OPEN);
         while (1) {
             // We get the generic value
             node* generic = parse_statement(parser, 0);
@@ -106,8 +184,8 @@ node_identifier* parse_identifier(parser_context* parser)  {
 
             consume(parser, TOKEN_COMMA);
         }
-        // And then end it with the closing brace.
-        consume(parser, TOKEN_BRACE_CLOSE);
+        // And then end it with the closing symbol.
+        consume(parser, TOKEN_GENERIC_CLOSE);
     }
 
     // Now let's get our child if it exists.
@@ -159,7 +237,7 @@ node* parse_variable_definition(parser_context* parser, permissions perms) {
     if(at(parser, TOKEN_ASSIGN)) {
         // We've got a default type!
         consume(parser, TOKEN_ASSIGN);
-        variable_def->default_value = parse_statement(parser, 0);
+        variable_def->default_value = parse_expression(parser);
     }
 
     consume(parser, TOKEN_END_STMT);
@@ -168,25 +246,106 @@ node* parse_variable_definition(parser_context* parser, permissions perms) {
 }
 
 node* parse_function_definition(parser_context* parser, permissions perms) {
-    consume(parser, TOKEN_KW_FUNCTION);
     node_function_def* function_def = new_node_function_def(parser);
     function_def->flags = perms;
+
+    // Syntax:
+    // [modifiers] function [name]([parameters]) (-> [return type])
+    // Then either { [body] } or a semicolon, depending on the function declaration.
+    // Modifiers are already handled.
+    // No return type means it's a void.
+    consume(parser, TOKEN_KW_FUNCTION);
+
+    // [name]
+    function_def->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+
+    // Parameters
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    if(!at(parser, TOKEN_PARENTHESIS_CLOSE)) { // If we're not immediately at a close there's values.
+        while (1) {
+
+            // A parameter is
+            // [name] [type] (*<- [default value])
+            // Followed by a comma if there's multiple.
+
+            node_parameter* parameter = new_node_parameter(parser);
+            parameter->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+            parameter->value_type = parse_identifier(parser);
+
+            if(at(parser, TOKEN_ASSIGN)) {
+                consume(parser, TOKEN_ASSIGN);
+                parameter->default_value = parse_expression(parser);
+            }
+
+            list_push(parser, function_def->parameters, (node*)parameter);
+
+            if(!at(parser, TOKEN_COMMA))
+                break;
+
+            consume(parser, TOKEN_COMMA);
+        }
+    }
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    if(at(parser, TOKEN_ACCESS)) {
+        consume(parser, TOKEN_ACCESS);
+        function_def->return_type = parse_identifier(parser);
+    }
+
+    // Extern functions don't declare a body
+    if(perms & PERMS_EXTERN) {
+        consume(parser, TOKEN_END_STMT);
+        return (node*)function_def;
+    }
+
+    // TODO: Function body parsing.
+    function_def->body = parse_body(parser);
 
     return (node*)function_def;
 }
 
 node* parse_class_definition(parser_context* parser, permissions perms) {
-    consume(parser, TOKEN_KW_CLASS);
     node_class_def* class_def = new_node_class_def(parser);
     class_def->flags = perms;
+
+    // Structure:
+    // [modifiers] class [name]{[generics]} { ... }
+
+    consume(parser, TOKEN_KW_CLASS);
+
+    class_def->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+
+    if(at(parser, TOKEN_GENERIC_OPEN)) {
+        consume(parser, TOKEN_GENERIC_OPEN);
+
+        while (1) {
+            node_literal* literal = new_node_literal(parser);
+            literal->value = copy_string(parser, consume(parser, TOKEN_ID).data);
+            list_push(parser, class_def->generics, (node*)literal);
+
+            if(!at(parser, TOKEN_COMMA))
+                break;
+            consume(parser, TOKEN_COMMA);
+        }
+
+        consume(parser, TOKEN_GENERIC_CLOSE);
+    }
+
+    // TODO: Class body
+
+    class_def->body = parse_body(parser);
 
     return (node*)class_def;
 }
 
 node* parse_struct_definition(parser_context* parser, permissions perms) {
-    consume(parser, TOKEN_KW_STRUCT);
     node_struct_def* struct_def = new_node_struct_def(parser);
     struct_def->flags = perms;
+
+    // Structs are like low-level classes.
+    consume(parser, TOKEN_KW_STRUCT);
+    struct_def->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+    struct_def->body = parse_body(parser);
 
     return (node*)struct_def;
 }
@@ -227,10 +386,202 @@ node* parse_definition(parser_context* parser) {
 
         // Error
         else {
-            error_throw("RCT2002", current(parser).loc, "Invalid token %s", TOKEN_NAMES[current(parser).type]);
+            throw_invalid_token(current(parser));
             break;
         }
     }
+}
+
+static int is_assign(token_type_e type) {
+    return type == TOKEN_ASSIGN || type == TOKEN_ASSIGN_DIVIDE ||
+    type == TOKEN_ASSIGN_MINUS || type == TOKEN_ASSIGN_MULTIPLY ||
+    type == TOKEN_ASSIGN_PLUS;
+}
+
+static int is_single_op(token_type_e type) {
+    return type == TOKEN_INCREMENT || type == TOKEN_DECREMENT;
+}
+
+static node_function_call* parse_function_call(parser_context* parser, node_identifier* identifier) {
+    node_function_call* call = new_node_function_call(parser);
+
+    call->target = identifier;
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+
+    if(!at(parser, TOKEN_PARENTHESIS_CLOSE)) {
+        while (1) {
+            node *value = parse_expression(parser);
+            if (value != NULL)
+                list_push(parser, call->parameters, value);
+            if (!at(parser, TOKEN_COMMA))
+                break;
+            consume(parser, TOKEN_COMMA);
+        }
+    }
+
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    return call;
+}
+
+static node* parse_name_or_call(parser_context* parser) {
+    node_identifier* identifier = parse_identifier(parser);
+
+    if(at(parser, TOKEN_PARENTHESIS_OPEN)) {
+        return (node*)parse_function_call(parser, identifier);
+    }
+    return (node*)identifier;
+
+}
+
+// Parser one of the sides in an expression.
+static node* parse_primary_expression(parser_context* parser) {
+    if(at(parser, TOKEN_STRING))
+        return (node*)parse_literal(parser);
+    if(at(parser, TOKEN_NUMERIC))
+        return (node*)parse_literal(parser);
+
+    if(at(parser, TOKEN_TRUE))
+        return (node*)parse_literal(parser);
+    if(at(parser, TOKEN_FALSE))
+        return (node*)parse_literal(parser);
+
+    if(at(parser, TOKEN_ID))
+        return (node*)parse_name_or_call(parser);
+
+    throw_invalid_token(current(parser));
+    return NULL;
+}
+
+// Thanks to the rgoc project.
+// I have no clue how this works lol.
+static node* parse_binary_expression(parser_context* parser, int parent_precedence) {
+    node* left = NULL;
+
+    int unary_precedence = unary_op_precedence(current(parser).type);
+    if(unary_precedence != 0 && unary_precedence > parent_precedence) {
+        token_type_e operator = consume(parser, current(parser).type).type;
+        node* operand = parse_binary_expression(parser, unary_precedence);
+
+        node_unary_exp* unary = new_node_unary_exp(parser);
+        unary->operator = get_operator(operator);
+        unary->operand = operand;
+        return (node*)unary;
+    } else {
+        left = parse_primary_expression(parser);
+
+        // TODO: Expanded primary expressions
+    }
+
+    // Time for magic
+    while (1) {
+        int precedence = binary_op_precedence(current(parser).type);
+
+        if(precedence == 0 || precedence <= parent_precedence) {
+            break;
+        }
+
+        operators operator = get_operator(current(parser).type);
+        step(parser, 1);
+
+        node* right = parse_binary_expression(parser, precedence);
+
+        node_binary_exp* binary = new_node_binary_exp(parser);
+        binary->operator = operator;
+        binary->left = left;
+        binary->right = right;
+
+        left = (node*)binary;
+    }
+
+    return left;
+}
+
+static node_make* parse_make(parser_context* parser) {
+    node_make* make = new_node_make(parser);
+    consume(parser, TOKEN_KW_MAKE);
+
+    make->target = parse_identifier(parser);
+
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    if(!at(parser, TOKEN_PARENTHESIS_CLOSE)) {
+        while (1) {
+            node *value = parse_expression(parser);
+            if (value != NULL)
+                list_push(parser, make->parameters, value);
+            if (!at(parser, TOKEN_COMMA))
+                break;
+            consume(parser, TOKEN_COMMA);
+        }
+    }
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    return make;
+}
+
+static node_return* parse_return(parser_context* parser) {
+    node_return* return_stmt = new_node_return(parser);
+
+    consume(parser, TOKEN_KW_RETURN);
+
+    return_stmt->value = parse_expression(parser);
+
+    return return_stmt;
+}
+
+static node* parse_expression(parser_context* parser) {
+    int parser_old_location = parser->token_current;
+
+    if(at(parser, TOKEN_ID)) {
+        // We're doing something with accessors
+        node_identifier* id = parse_identifier(parser);
+
+        // If we're trying to assign something
+        if(is_assign(current(parser).type)) {
+            operators operator = OP_NONE;
+            step(parser, 1);
+            node_assignation* assignation = new_node_assignation(parser);
+            assignation->operator = operator;
+            assignation->target = id;
+            assignation->value = parse_expression(parser);
+
+            return (node*)assignation;
+        }
+        if(is_single_op(current(parser).type)) {
+            // i++ is the same as i <-+ 1
+            // This means we can just turn it into an assignation.
+
+            node_literal* literal = new_node_literal(parser);
+            literal->value = copy_string(parser, "1");
+
+            operators operator = OP_NONE;
+            switch (current(parser).type) {
+                case TOKEN_INCREMENT:
+                    operator = OP_ADD;
+                    break;
+                case TOKEN_DECREMENT:
+                    operator = OP_SUBTRACT;
+                    break;
+                default:
+                    break;
+            }
+
+            step(parser, 1);
+            node_assignation* assignation = new_node_assignation(parser);
+            assignation->operator = operator;
+            assignation->target = id;
+            assignation->value = (node*)literal;
+            return (node*)assignation;
+        }
+    }
+
+    if(at(parser, TOKEN_KW_MAKE)) {
+        return parse_make(parser);
+    }
+
+    parser->token_current = parser_old_location;
+
+    return parse_binary_expression(parser, 0);
 }
 
 // Return and optionally consume a semicolon.
@@ -258,16 +609,11 @@ node* parse_statement(parser_context* parser, int semicolon) {
     if(at(parser, TOKEN_KW_CLASS)) PARSE(0, parse_definition(parser))
     if(at(parser, TOKEN_KW_STRUCT)) PARSE(0, parse_definition(parser))
 
-    // The other stuff.
+    // Return
+    if(at(parser, TOKEN_KW_RETURN)) PARSE(1, parse_return(parser))
 
-    // TODO: Operators and whatnot are not supported w/ this current code.
-    if(at(parser, TOKEN_ID)) PARSE(0, parse_identifier(parser))
-    if(at(parser, TOKEN_NUMERIC)) PARSE(0, parse_literal(parser))
-    if(at(parser, TOKEN_STRING)) PARSE(0, parse_literal(parser))
-
-    error_throw("RCT2002", current(parser).loc, "Invalid token %s", TOKEN_NAMES[current(parser).type]);
-    step(parser, 1);
-    return NULL;
+    // Finally, we do expressions.
+    PARSE(1, parse_expression(parser))
 }
 
 

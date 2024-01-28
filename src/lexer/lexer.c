@@ -104,7 +104,7 @@ static int is_char_numeric(int c) {
 
 // We allow A-Z in any capitalization plus underscores in the start of a word/identifier
 static int is_char_word_starter(int c) {
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '@';
 }
 // Then 2nd character onward allows us to do numbers tool.
 static int is_char_word(int c) {
@@ -381,6 +381,9 @@ void lexer_process(lexer_context* context) {
 
         CASE_SIMPLE_MULT("<=", TOKEN_OP_LT_EQUALS)
         CASE_SIMPLE_MULT(">=", TOKEN_OP_GR_EQUALS)
+
+        CASE_SIMPLE_MULT("++", TOKEN_INCREMENT)
+        CASE_SIMPLE_MULT("--", TOKEN_DECREMENT)
 
         CASE_SIMPLE('=', TOKEN_OP_EQUALS)
 

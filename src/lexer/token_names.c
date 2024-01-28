@@ -31,6 +31,8 @@ const char* TOKEN_NAMES[] = {
         "TOKEN_NUMERIC",
         "TOKEN_TRUE",
         "TOKEN_FALSE",
+        "TOKEN_INCREMENT",
+        "TOKEN_DECREMENT",
         "TOKEN_OP_PLUS",
         "TOKEN_OP_MINUS",
         "TOKEN_OP_MOD",
