@@ -364,6 +364,8 @@ void lexer_process(lexer_context* context) {
         CASE_SIMPLE('[', TOKEN_BRACKET_OPEN)
         CASE_SIMPLE(']', TOKEN_BRACKET_CLOSE)
 
+        CASE_SIMPLE(',', TOKEN_COMMA)
+
         CASE_SIMPLE_MULT("::", TOKEN_PACKAGE_ACCESS)
 
         // Characters like minus and "<" need to be checked in order of size.
@@ -394,6 +396,7 @@ void lexer_process(lexer_context* context) {
         if(is_char_word_starter(current(context))) { lex_word(context); continue; }
         if(is_char_numeric(current(context))) { lex_numeric(context); continue; }
         // For now, we just get mad :)
+        step(context, 1);
         error_throw("RCT1010", context->loc, "Invalid token %2X(%c)", current(context), current(context));
     }
     push_empty_token(context, TOKEN_EOF);
