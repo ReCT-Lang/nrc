@@ -91,8 +91,8 @@ node_identifier* parse_identifier(parser_context* parser)  {
     }
 
     // If it's not a package access, we first handle generics, then child identifiers.
-    if(at(parser, TOKEN_BRACE_OPEN)) {
-        consume(parser, TOKEN_BRACE_OPEN);
+    if(at(parser, TOKEN_GENERIC_OPEN)) {
+        consume(parser, TOKEN_GENERIC_OPEN);
         while (1) {
             // We get the generic value
             node* generic = parse_statement(parser, 0);
@@ -106,8 +106,8 @@ node_identifier* parse_identifier(parser_context* parser)  {
 
             consume(parser, TOKEN_COMMA);
         }
-        // And then end it with the closing brace.
-        consume(parser, TOKEN_BRACE_CLOSE);
+        // And then end it with the closing symbol.
+        consume(parser, TOKEN_GENERIC_CLOSE);
     }
 
     // Now let's get our child if it exists.
