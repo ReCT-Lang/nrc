@@ -27,6 +27,10 @@ class MyType {
     static set function MakeSpecial() -> MyType{
         // Public static, basically set => static, var => private/scope-specific
 
+        var temp_var_a <- 67;
+        var temp_var_b <- 69;
+        var result <- 3 * (578 * 29 + 5 / temp_var_a) * temp_var_b;
+
         // We make instances of stuff with make.
         // We can also return null or nil if we wish.
         return make MyType(true);

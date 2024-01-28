@@ -434,6 +434,13 @@ static node* parse_name_or_call(parser_context* parser) {
 
 }
 
+static node* parse_parenthesis_expression(parser_context* parser) {
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    node* value = parse_expression(parser);
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+    return value;
+}
+
 // Parser one of the sides in an expression.
 static node* parse_primary_expression(parser_context* parser) {
     if(at(parser, TOKEN_STRING))
@@ -448,6 +455,9 @@ static node* parse_primary_expression(parser_context* parser) {
 
     if(at(parser, TOKEN_ID))
         return (node*)parse_name_or_call(parser);
+
+    if(at(parser, TOKEN_PARENTHESIS_OPEN))
+        return parse_parenthesis_expression(parser);
 
     throw_invalid_token(current(parser));
     return NULL;
