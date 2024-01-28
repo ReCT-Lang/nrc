@@ -209,13 +209,13 @@ node* parse_function_definition(parser_context* parser, permissions perms) {
     }
     consume(parser, TOKEN_PARENTHESIS_CLOSE);
 
-    if(at(parser, TOKEN_ASSIGN)) {
-        consume(parser, TOKEN_ASSIGN);
+    if(at(parser, TOKEN_ACCESS)) {
+        consume(parser, TOKEN_ACCESS);
         function_def->return_type = parse_identifier(parser);
     }
 
     // Extern functions don't declare a body
-    if(perms &= PERMS_EXTERN) {
+    if(perms & PERMS_EXTERN) {
         consume(parser, TOKEN_END_STMT);
         return (node*)function_def;
     }
@@ -226,9 +226,33 @@ node* parse_function_definition(parser_context* parser, permissions perms) {
 }
 
 node* parse_class_definition(parser_context* parser, permissions perms) {
-    consume(parser, TOKEN_KW_CLASS);
     node_class_def* class_def = new_node_class_def(parser);
     class_def->flags = perms;
+
+    // Structure:
+    // [modifiers] class [name]{[generics]} { ... }
+
+    consume(parser, TOKEN_KW_CLASS);
+
+    class_def->name = copy_string(parser, consume(parser, TOKEN_ID).data);
+
+    if(at(parser, TOKEN_GENERIC_OPEN)) {
+        consume(parser, TOKEN_GENERIC_OPEN);
+
+        while (1) {
+            node_literal* literal = new_node_literal(parser);
+            literal->value = copy_string(parser, consume(parser, TOKEN_ID).data);
+            list_push(parser, class_def->generics, (node*)literal);
+
+            if(!at(parser, TOKEN_COMMA))
+                break;
+            consume(parser, TOKEN_COMMA);
+        }
+
+        consume(parser, TOKEN_GENERIC_CLOSE);
+    }
+
+    // TODO: Class body
 
     return (node*)class_def;
 }

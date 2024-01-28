@@ -11,7 +11,8 @@
   "node_class_def": {
     "name": "string",
     "flags": "permissions",
-    "children": "node_list"
+    "children": "node_list",
+    "generics": "node_list"
   },
   "node_struct_def": {
     "name": "string",

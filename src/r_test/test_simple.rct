@@ -1,12 +1,12 @@
 package sys; // Include the sys package
 use sys; // Use the sys package
 
-extern function malloc(long size) -> ref[std::void];
+extern function malloc(long size) -> ref{std::void};
 
-var array_top_level -> array[string, 5];
-var array_deep -> array[array[string]];
+var array_top_level -> array{string, 5};
+var array_deep -> array{array{string}};
 
-class MyType {
+class MyType{T1, T2, T3} {
     static private var some_variable -> std::string;
 
     set static function some_func() {

@@ -67,7 +67,11 @@ typedef enum token_type_e {
 
     TOKEN_PACKAGE_ACCESS,
 
-    TOKEN_END_STMT
+    TOKEN_END_STMT,
+
+    // These are just for ease-of-work
+    TOKEN_GENERIC_OPEN = TOKEN_BRACE_OPEN,
+    TOKEN_GENERIC_CLOSE = TOKEN_BRACE_CLOSE,
 
 } token_type_e;
 
