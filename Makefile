@@ -51,7 +51,7 @@
 
 EXE:=nrc
 
-MODS:=/cli /lexer /util /parser /errors
+MODS:=/cli /lexer /util /parser /errors /binder
 
 CPY:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.cgen.py))
 HPY:=$(foreach mod,$(MODS),$(wildcard src$(mod)/*.hgen.py))
