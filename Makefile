@@ -74,7 +74,7 @@ CC:=gcc
 LD:=gcc
 PY:=python
 
-CCFLAGS:=-g -Imemstack/include
+CCFLAGS:=-g -Imemstack/include -Isrc
 LDFLAGS:=-g
 LIBRARY:=
 
