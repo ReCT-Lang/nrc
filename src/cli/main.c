@@ -107,7 +107,7 @@ int main() {
 
     binder_context* binder = binder_create(resolver);
 
-    binder_mount(binder, parser->node);
+    binder_mount(binder, parser->node, "test_simple.rct");
     binder_validate(binder);
 
     binder_destroy(binder);

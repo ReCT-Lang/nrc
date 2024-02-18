@@ -10,6 +10,7 @@ output = '''// AUTO GENERATED!
 #define NODES_H
 
 #include "parser.h"
+#include <lexer/location.h>
 
 typedef char* string;
 typedef struct parser_context parser_context;
@@ -45,6 +46,7 @@ output += "\n} node_type;\n\n"
 output += '''
 typedef struct node {
     node_type type;
+    location loc;
 } node;
 
 typedef struct {
@@ -69,6 +71,7 @@ for t in definitions.keys():
     data = definitions[t]
     output += "typedef struct " + t + "{\n"
     output += "\tnode_type type;\n"
+    output += "\tlocation loc;\n"
     for fieldName in data.keys():
         dataType = data[fieldName]
         if dataType == "node_list":

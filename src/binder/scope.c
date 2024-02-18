@@ -30,36 +30,51 @@ scope_object_list* new_scope_object_list(binder_context* binder) {
     return list;
 }
 
-scope_object* new_scope_object(binder_context* binder, scope_object_type type) {
+scope_object* new_scope_object(binder_context* binder, scope_object_type type, node* source) {
     scope_object* object = (scope_object*)msalloc(binder->alloc_stack, sizeof(scope_object));
 
     object->object_type = type;
     object->children = new_scope_object_list(binder);
     object->private = 0;
     object->parent = NULL;
+    object->name = NULL;
+    object->source = source;
 
     return object;
 }
 
-static void print_scope_object_i(scope_object* object, int indent) {
+const char* get_scope_name(scope_object_type t) {
+    switch (t) {
+        case SCOPE_OBJECT_GLOBAL:
+            return "SCOPE_OBJECT_GLOBAL";
+        case SCOPE_OBJECT_PACKAGE:
+            return "SCOPE_OBJECT_PACKAGE";
+        case SCOPE_OBJECT_FUNCTION:
+            return "SCOPE_OBJECT_FUNCTION";
+        case SCOPE_OBJECT_VARIABLE:
+            return "SCOPE_OBJECT_VARIABLE";
+        case SCOPE_OBJECT_CLASS:
+            return "SCOPE_OBJECT_CLASS";
+        case SCOPE_OBJECT_STRUCT:
+            return "SCOPE_OBJECT_STRUCT";
+        case SCOPE_OBJECT_PARAMETER:
+            return "SCOPE_OBJECT_PARAMETER";
+        case SCOPE_OBJECT_TYPE:
+            return "SCOPE_OBJECT_TYPE";
+        default:
+            return "???";
+    }
+}
 
-    string type_names[] = {
-            "SCOPE_OBJECT_GLOBAL",
-            "SCOPE_OBJECT_PACKAGE",
-            "SCOPE_OBJECT_FUNCTION",
-            "SCOPE_OBJECT_VARIABLE",
-            "SCOPE_OBJECT_CLASS",
-            "SCOPE_OBJECT_STRUCT",
-            "SCOPE_OBJECT_PARAMETER",
-            "SCOPE_OBJECT_TYPE"
-    };
+
+static void print_scope_object_i(scope_object* object, int indent) {
 
     if(object == NULL) {
         printf("%*sNULL\n", indent * 4, "");
         return;
     }
 
-    printf("%*s%s: %s - private: %i\n", indent * 4, "", type_names[object->object_type],
+    printf("%*s%s: %s - private: %i\n", indent * 4, "", get_scope_name(object->object_type),
            object->name, object->private);
 
     for (int i = 0; i < object->children->length; ++i) {
@@ -69,4 +84,11 @@ static void print_scope_object_i(scope_object* object, int indent) {
 
 void print_scope_object(scope_object* object) {
     print_scope_object_i(object, 0);
+}
+
+location scope_location(scope_object* object) {
+    if(object == NULL)
+        return (location) {0, 0};
+    if(object->source == NULL)
+        return (location) {0, 0};
 }
