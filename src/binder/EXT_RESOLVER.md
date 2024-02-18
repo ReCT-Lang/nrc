@@ -41,9 +41,50 @@ for(int i = 0; i < sys_child_objects) {
         printf("Found public static package-wide function: %s\n", value_buffer);
         
         free(value_buffer);
-        
     }
     
 }
-
 ```
+
+## Object kinds
+There are a number of object kinds that the EXT interface may use. Each has its own specific structure which
+you must follow.
+
+### EXT_OBJECT_KIND_GLOBAL_SCOPE - Package-wide scope
+- value - The package name
+- level - EXT_ACCESS_LEVEL_STATIC
+- children - EXT_OBJECT_KIND_VARIABLE, EXT_OBJECT_KIND_FUNCTION, EXT_OBJECT_KIND_CLASS or EXT_OBJECT_KIND_STRUCT
+
+### EXT_OBJECT_KIND_VARIABLE - Variables
+- value - The variable name
+- children - 1 x EXT_OBJECT_KIND_TYPE
+
+### EXT_OBJECT_KIND_FUNCTION - Functions
+- value - The function name
+- children - 1 x EXT_OBJECT_KIND_TYPE for return value, any number of EXT_OBJECT_KIND_GENERIC_PARAMETER, any number of
+  EXT_OBJECT_KIND_PARAMETER
+
+### EXT_OBJECT_KIND_CLASS - Classes
+- value - The class name
+- children - EXT_OBJECT_KIND_VARIABLE, EXT_OBJECT_KIND_FUNCTION, EXT_OBJECT_KIND_CLASS, 
+    EXT_OBJECT_KIND_GENERIC_PARAMETER or EXT_OBJECT_KIND_STRUCT
+
+### EXT_OBJECT_KIND_STRUCT - Structs
+- value - The struct name
+- children - EXT_OBJECT_KIND_VARIABLE, EXT_OBJECT_KIND_FUNCTION
+
+### EXT_OBJECT_KIND_PARAMETER - Function parameters
+- value - The parameter name(optional)
+- children - 1x EXT_OBJECT_KIND_TYPE for the parameter type
+
+### EXT_OBJECT_KIND_RETURN_VALUE - Return values
+- value - Ignored
+- children - 1x EXT_OBJECT_KIND_TYPE for the return type
+
+### EXT_OBJECT_KIND_GENERIC_PARAMETER - Generic parameters
+- value - The generic name
+- children - 1x EXT_OBJECT_KIND_TYPE for the type restraint
+
+### EXT_OBJECT_KIND_TYPE - Types where needed
+- value - The type name
+- children - Any number of EXT_OBJECT_KIND_GENERIC_PARAMETER for generics
