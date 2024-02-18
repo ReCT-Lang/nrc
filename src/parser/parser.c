@@ -539,6 +539,70 @@ static node_return* parse_return(parser_context* parser) {
     return return_stmt;
 }
 
+static node_while* parse_while(parser_context* parser) {
+    node_while* statement = new_node_while(parser);
+
+    consume(parser, TOKEN_KW_WHILE);
+
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    statement->condition = parse_expression(parser);
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    if(at(parser, TOKEN_BRACE_OPEN)) {
+        statement->execute = parse_body(parser);
+    } else {
+        // Make a body w/ a single line
+        statement->execute = new_node_body(parser);
+        list_push(parser, statement->execute->children, parse_statement(parser, 1));
+    }
+
+    return statement;
+}
+
+static node_if* parse_if(parser_context* parser) {
+    node_if* statement = new_node_if(parser);
+
+    // if([stmt]) { [...] } else if([stmt]) { [...] } else { [...] }
+
+    consume(parser, TOKEN_KW_IF);
+
+    consume(parser, TOKEN_PARENTHESIS_OPEN);
+    statement->condition = parse_expression(parser);
+    consume(parser, TOKEN_PARENTHESIS_CLOSE);
+
+    // We can either have multiple statements within braces or we just
+    // have a single statement on the next line
+    if(at(parser, TOKEN_BRACE_OPEN)) {
+        statement->execute = parse_body(parser);
+    } else {
+        // Make a body w/ a single line
+        statement->execute = new_node_body(parser);
+        list_push(parser, statement->execute->children, parse_statement(parser, 1));
+    }
+
+    // There's another clause
+    if(at(parser, TOKEN_KW_ELSE)) {
+        consume(parser, TOKEN_KW_ELSE);
+
+        // else if statement
+        if(at(parser, TOKEN_KW_IF)) {
+            statement->else_case = (node*)parse_if(parser);
+        } else {
+
+            // We once again check for a multi-line case.
+            if(at(parser, TOKEN_BRACE_OPEN)) {
+                statement->else_case = (node*)parse_body(parser);
+            } else {
+                // Make a body w/ a single line
+                statement->else_case = (node*)parse_statement(parser, 1);
+            }
+        }
+    }
+
+    return statement;
+
+}
+
 static node* parse_expression(parser_context* parser) {
     int parser_old_location = parser->token_current;
 
@@ -586,7 +650,7 @@ static node* parse_expression(parser_context* parser) {
     }
 
     if(at(parser, TOKEN_KW_MAKE)) {
-        return parse_make(parser);
+        return (node*)parse_make(parser);
     }
 
     parser->token_current = parser_old_location;
@@ -622,6 +686,11 @@ node* parse_statement(parser_context* parser, int semicolon) {
     // Return
     if(at(parser, TOKEN_KW_RETURN)) PARSE(1, parse_return(parser))
 
+    // Control flow statements
+    if(at(parser, TOKEN_KW_IF)) PARSE(0, parse_if(parser))
+    if(at(parser, TOKEN_KW_WHILE)) PARSE(0, parse_while(parser))
+    // TODO: for loops
+
     // Finally, we do expressions.
     PARSE(1, parse_expression(parser))
 }
@@ -629,7 +698,7 @@ node* parse_statement(parser_context* parser, int semicolon) {
 
 void parser_parse(parser_context* parser) {
     node_root* root_node = new_node_root(parser);
-    parser->node = (node*)root_node;
+    parser->node = root_node;
 
     while(current(parser).type != TOKEN_EOF) {
         node* n = parse_statement(parser, 1);

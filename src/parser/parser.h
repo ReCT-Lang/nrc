@@ -5,11 +5,11 @@
 #include "nodes.h"
 #include "../lexer/lexer.h"
 
-typedef struct node node;
+typedef struct node_root node_root;
 
 typedef struct parser_context {
     memstack* allocation_stack;
-    node* node;
+    node_root* node;
     lexer_context* lexer;
     int token_current;
 } parser_context;

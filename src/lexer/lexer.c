@@ -252,7 +252,6 @@ static void lex_word(lexer_context* context) {
     else KW_CHECK("unsafe", TOKEN_KW_UNSAFE)
     else KW_CHECK("if", TOKEN_KW_IF)
     else KW_CHECK("else", TOKEN_KW_ELSE)
-    else KW_CHECK("elif", TOKEN_KW_ELIF)
     else KW_CHECK("for", TOKEN_KW_FOR)
     else KW_CHECK("function", TOKEN_KW_FUNCTION)
     else KW_CHECK("return", TOKEN_KW_RETURN)
@@ -265,6 +264,7 @@ static void lex_word(lexer_context* context) {
     else KW_CHECK("package", TOKEN_KW_PACKAGE)
     else KW_CHECK("use", TOKEN_KW_USE)
     else KW_CHECK("alias", TOKEN_KW_ALIAS)
+    else KW_CHECK("while", TOKEN_KW_WHILE)
     //else KW_CHECK("ref", TOKEN_KW_REF)
 
 #ifdef NRC_JOKES
@@ -346,6 +346,12 @@ void lexer_process(lexer_context* context) {
 
         if(current(context) == '/' && peek(context, 1) == '/') {
             while (current(context) != '\n' && current(context) != EOF) step(context, 1);
+            continue;
+        }
+
+        if(current(context) == '/' && peek(context, 1) == '*') {
+            while (!(current(context) == '*' && peek(context, 1) == '/')) step(context, 1);
+            step(context, 2);
             continue;
         }
 

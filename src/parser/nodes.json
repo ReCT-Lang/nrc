@@ -77,5 +77,14 @@
   },
   "node_return": {
     "value": "node"
+  },
+  "node_if": {
+    "condition": "node",
+    "execute": "node_body",
+    "else_case": "node"
+  },
+  "node_while": {
+    "condition": "node",
+    "execute": "node_body"
   }
 }

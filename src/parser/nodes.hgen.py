@@ -55,6 +55,8 @@ typedef struct {
 
 void list_push(parser_context* context, node_list* list, node* data);
 
+extern string NODE_TYPE_NAMES[''' + str(len(definitions)) + '''];
+
 '''
 
 # Forwards declarations
@@ -184,6 +186,13 @@ for t in definitions.keys():
 
 output += '''   }
 }
+
+string NODE_TYPE_NAMES[''' + str(len(definitions)) + '''] = {'''
+
+output += ',\n'.join(['"' + x.upper() + '"' for x in definitions.keys()])
+
+output += '''
+};
 
 '''
 
